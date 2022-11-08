@@ -16,12 +16,11 @@ module.exports = (sequelize, DataTypes) => {
             name: DataTypes.STRING,
             email:{ type: DataTypes.STRING,
                 unique:true},
-            status: {
-                
+            status:{
                 type:DataTypes.STRING,
                 values: ["waiting", "completed"],
                 defaultValue: "waiting"},
-            action:{ type:DataTypes.BOOLEAN,
+                action:{ type:DataTypes.BOOLEAN,
                 defaultValue:true},
         },
         {

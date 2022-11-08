@@ -8,7 +8,7 @@ const CustomAPIError = require("../errors/custom-error");
 
 //sending invite mail
 const sendInvite = async (req, res) => {
-    await Invite.create(req.body);
+    await Invite.create({name:req.body.name,email:req.body.email});
     const accessToken = jwt.generateAccessToken(req.body.email);
     const registerURL = `${req.protocol}://${req.get(
         "host"
@@ -48,7 +48,7 @@ const resendInvite = async (req, res) => {
       }
      //revoking the details of registred user
      await User.destroy({where:{email:invite.email}});
-     await Invite.update({Status:"waiting"},
+     await Invite.update({status:"waiting"},
      {where:{email:invite.email}});
      const accessToken = jwt.generateAccessToken(invite.email);
      const registerURL = `${req.protocol}://${req.get(
@@ -69,5 +69,6 @@ const resendInvite = async (req, res) => {
      res.status(StatusCodes.OK).json({message:"Resend the invite successfully to user"}
     );
 };
+
 
 module.exports = { sendInvite, resendInvite, cancelUser };

@@ -25,12 +25,15 @@ const Register = async (req, res) => {
     if (inviteUser.action !== true) {
         throw new UnauthorizedError("cannot access");
     }
-    if (inviteUser.Status === "completed") {
+    if (inviteUser.status === "completed") {
         throw new BadRequestError("User already registered");
     }
     req.body.password = await bcrypt.hashPassword(req.body.password);
-    const userdata = await User.create({firstName:req.body.firstName,lastName:req.body.lastName,address:req.body.address,email:decoded.email,phone:req.body.phone,password:req.body.password});
-    await Invite.update({Status:"completed"},
+    //if(req.body.email!==decoded.email){
+        //throw new BadRequestError("please provide the correct email");
+    //}
+    const userdata = await User.create({firstName:req.body.firstName,lastName:req.body.lastName,address:req.body.address,email:req.body.email,phone:req.body.phone,password:req.body.password});
+    await Invite.update({status:"completed"},
     {where:{email:decoded.email}}
     );
     res.status(StatusCodes.OK).json({
