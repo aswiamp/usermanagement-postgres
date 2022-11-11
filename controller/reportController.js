@@ -31,7 +31,7 @@ exports.Report =  async() => {
                 <p>pending Users : ${ awaitingUserCount }</p>`;
 
     //mail sending time scheduled on 18:28
-    cron.schedule('28 18 * * *',async() => {
+    cron.schedule('40 17 * * *',async() => {
         await transporter.sendMail({
             from :'standardc@gmail.com' ,
             to : 'ADMIN <admin@gmail.com>',

@@ -5,6 +5,8 @@ const Invite = db.invite;
 const { StatusCodes } = require("http-status-codes");
 const transporter = require("../utills/sendMail");
 const CustomAPIError = require("../errors/custom-error");
+const paginate = require("../utills/paginate");
+const {Op}=require("sequelize");
 
 //sending invite mail
 const sendInvite = async (req, res) => {
@@ -69,6 +71,24 @@ const resendInvite = async (req, res) => {
      res.status(StatusCodes.OK).json({message:"Resend the invite successfully to user"}
     );
 };
+//get userlist
+
+const getUserList= async(req,res)=>{
+  const { page, size,search,sort } = req.query;
+  var condition = search ? { [Op.or]:[{firstName: { [Op.like]: `%${search}%`}},{email:{ [Op.like]: `%${search}%`} },{lastName: { [Op.like]: `%${search}%`}}]}: null;
+  const { limit, offset } = paginate.getPagination(page, size);
+  await User.findAndCountAll({
+    where:condition,
+      limit,
+      offset,
+      order:paginate.sorted(sort),
+  attributes:["firstName","lastName","email","id"]}).then((data) => {
+      const response = paginate.getPagingData(data, page, limit);
+      res.status(StatusCodes.OK).json(response);
+  });
 
 
-module.exports = { sendInvite, resendInvite, cancelUser };
+};
+
+
+module.exports = { sendInvite, resendInvite, cancelUser,getUserList };
