@@ -2,7 +2,7 @@ const BadRequestError = require("../errors/badRequestError");
 const jwt = require("jsonwebtoken");
 
 exports.generateAccessToken = (payload) => {
-    return jwt.sign({ email:payload }, process.env.JWT_SECRET, {
+    return jwt.sign({ email: payload }, process.env.JWT_SECRET, {
         expiresIn: process.env.JWT_LIFETIME,
     });
 };

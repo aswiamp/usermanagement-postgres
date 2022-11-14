@@ -14,14 +14,13 @@ module.exports = (sequelize, DataTypes) => {
     invite.init(
         {
             name: DataTypes.STRING,
-            email:{ type: DataTypes.STRING,
-                unique:true},
-            status:{
-                type:DataTypes.STRING,
+            email: { type: DataTypes.STRING, unique: true },
+            status: {
+                type: DataTypes.STRING,
                 values: ["waiting", "completed"],
-                defaultValue: "waiting"},
-                action:{ type:DataTypes.BOOLEAN,
-                defaultValue:true},
+                defaultValue: "waiting",
+            },
+            action: { type: DataTypes.BOOLEAN, defaultValue: true },
         },
         {
             sequelize,
