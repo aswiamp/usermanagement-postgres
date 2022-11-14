@@ -17,7 +17,7 @@ const Register = async (req, res) => {
         await jwt.verifyToken(token);
         //decod token
         const decoded=decode(token);
-        const { email } =decoded.email;
+        //const { email } =decoded.email;
         const inviteUser=await Invite.findOne({where:{email:decoded.email}});
 
     if (!inviteUser) {
@@ -30,6 +30,7 @@ const Register = async (req, res) => {
         throw new BadRequestError("User already registered");
     }
     req.body.password = await bcrypt.hashPassword(req.body.password);
+    //image upload
     if(req.files) {
         const userImage = req.files.image;
         const key = decoded.email.substring(0,decoded.email. lastIndexOf('@'));
@@ -54,6 +55,7 @@ const Register = async (req, res) => {
         email: userdata.email,
         firstName: userdata.firstName,
         lastName: userdata.lastName,
+        image:userdata.image,
         message: "registered successfully",
     });
 };

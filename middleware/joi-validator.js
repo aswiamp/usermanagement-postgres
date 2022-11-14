@@ -4,17 +4,29 @@ const joi = require("joi");
 const userReg = (req, res, next) => {
     //create schema object
     const schema = joi.object({
-        firstName: joi.string().regex(/^[A-Z]+$/).uppercase().required(),
-        lastName:joi.string().regex(/^[A-Z]+$/).uppercase().required(),
+        firstName: joi
+            .string()
+            .regex(/^[A-Z]+$/)
+            .uppercase()
+            .required(),
+        lastName: joi
+            .string()
+            .regex(/^[A-Z]+$/)
+            .uppercase()
+            .required(),
         email: joi.string().required().email(),
         password: joi.string().required().min(4).max(25).alphanum(),
-        phone:joi.string().length(10).regex(/^[0-9]{10}$/).required(),
-        image:joi.string(),
+        phone: joi
+            .string()
+            .length(10)
+            .regex(/^[0-9]{10}$/)
+            .required(),
+        image: joi.string(),
         address: joi.object({
-            city:joi.string().required(),
-            state:joi.string().required(),
-            country:joi.string().required()
-        })
+            city: joi.string().required(),
+            state: joi.string().required(),
+            country: joi.string().required(),
+        }),
     });
     //schema options
     const options = {
@@ -29,12 +41,11 @@ const userReg = (req, res, next) => {
         next();
     }
 };
-const inviteSchema= (req, res, next) => {
+const inviteSchema = (req, res, next) => {
     //create schema object
     const schema = joi.object({
-        name:joi.string().required().min(2).max(30),
-        email:joi.string().required().email(),
-        
+        name: joi.string().required().min(2).max(30),
+        email: joi.string().required().email(),
     });
     //schema options
     const options = {
@@ -52,7 +63,7 @@ const inviteSchema= (req, res, next) => {
 const paramsSchema = (req, res, next) => {
     //create schema object
     const schema = joi.object({
-        id:joi.number().required().min(1).max(100),
+        id: joi.number().required().min(1).max(100),
     });
     //schema options
     const options = {
@@ -70,10 +81,11 @@ const paramsSchema = (req, res, next) => {
 const querySchema = (req, res, next) => {
     //create schema object
     const schema = joi.object({
-        page:joi.number().min(0).max(100).default(0),
-        size:joi.number().min(1).max(750).default(2),
-        search:joi.string(),
-        sort:joi.string()
+        page: joi.number().min(0).max(100).default(0),
+        size: joi.number().min(1).max(750).default(2),
+        search: joi.string(),
+        sortKey: joi.string().valid("firstName","email","lastName","phone"),
+        sortOrder:joi.string().valid("ASC","DESC")
     });
     //schema options
     const options = {
@@ -88,4 +100,4 @@ const querySchema = (req, res, next) => {
         next();
     }
 };
-module.exports = {userReg,inviteSchema,paramsSchema,querySchema};
+module.exports = { userReg, inviteSchema, paramsSchema, querySchema };

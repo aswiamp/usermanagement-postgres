@@ -6,16 +6,16 @@ const { StatusCodes } = require("http-status-codes");
 const transporter = require("../utills/sendMail");
 const CustomAPIError = require("../errors/custom-error");
 const paginate = require("../utills/paginate");
-const {Op}=require("sequelize");
+const { Op } = require("sequelize");
 
 //sending invite mail
 const sendInvite = async (req, res) => {
-    await Invite.create({name:req.body.name,email:req.body.email});
+    await Invite.create({ name: req.body.name, email: req.body.email });
     const accessToken = jwt.generateAccessToken(req.body.email);
     const registerURL = `${req.protocol}://${req.get(
         "host"
     )}/api/v1/user/register/${accessToken}`;
-    var options={
+    var options = {
         from: '"ADMIN" <admin@gmail.com>',
         to: req.body.email,
         subject: "Welcome to StandardC",
@@ -27,37 +27,41 @@ const sendInvite = async (req, res) => {
     };
     await transporter.sendMail(options);
     res.status(StatusCodes.OK).json({
-      message:`Invite sent successfully to user ${req.body.email}`}
-    );
+        message: `Invite sent successfully to user ${req.body.email}`,
+    });
 };
 //sendmail cancelling
 const cancelUser = async (req, res) => {
     const invite = await Invite.findByPk(req.params.id);
-    if(!invite)
-    {
-      throw new CustomAPIError("no user with this id");
+    if (!invite) {
+        throw new CustomAPIError("no user with this id");
     }
-    await User.destroy({where:{email:invite.email}});
-    await Invite.destroy({where:{email:invite.email}});
-    res.status(StatusCodes.OK).json({message:"cancelled the mail of the following user",name:invite.name,email:invite.email});
+    await User.destroy({ where: { email: invite.email } });
+    await Invite.destroy({ where: { email: invite.email } });
+    res.status(StatusCodes.OK).json({
+        message: "cancelled the mail of the following user",
+        name: invite.name,
+        email: invite.email,
+    });
 };
 //resend invite mail
 const resendInvite = async (req, res) => {
-      const invite = await Invite.findByPk(req.params.id);
-      if(!invite)
-      {
+    const invite = await Invite.findByPk(req.params.id);
+    if (!invite) {
         throw new CustomAPIError("no user with this id");
-      }
-     //revoking the details of registred user
-     await User.destroy({where:{email:invite.email}});
-     await Invite.update({status:"waiting"},
-     {where:{email:invite.email}});
-     const accessToken = jwt.generateAccessToken(invite.email);
-     const registerURL = `${req.protocol}://${req.get(
+    }
+    //revoking the details of registred user
+    await User.destroy({ where: { email: invite.email } });
+    await Invite.update(
+        { status: "waiting" },
+        { where: { email: invite.email } }
+    );
+    const accessToken = jwt.generateAccessToken(invite.email);
+    const registerURL = `${req.protocol}://${req.get(
         "host"
     )}/api/v1/user/register/${accessToken}`;
-     let options={
-      from: '"ADMIN" <admin@gmail.com>',
+    let options = {
+        from: '"ADMIN" <admin@gmail.com>',
         to: invite.email,
         subject: "Welcome to StandardC",
         html: `<p>Hi, ${req.body.name}! </p>
@@ -65,30 +69,38 @@ const resendInvite = async (req, res) => {
             <br>verify your email with StandardC.
             <p> <a href=${registerURL}> Register Now </a></p>
             <br>This link will expire after 1 day`,
-     };
-     // eslint-disable-next-line no-undef
-     await transporter.sendMail(options);
-     res.status(StatusCodes.OK).json({message:"Resend the invite successfully to user"}
-    );
+    };
+    // eslint-disable-next-line no-undef
+    await transporter.sendMail(options);
+    res.status(StatusCodes.OK).json({
+        message: "Resend the invite successfully to user",
+    });
 };
 //get userlist
 
-const getUserList= async(req,res)=>{
-  const { page, size,search,sort } = req.query;
-  var condition = search ? { [Op.or]:[{firstName: { [Op.like]: `%${search}%`}},{email:{ [Op.like]: `%${search}%`} },{lastName: { [Op.like]: `%${search}%`}}]}: null;
-  const { limit, offset } = paginate.getPagination(page, size);
-  await User.findAndCountAll({
-    where:condition,
-      limit,
-      offset,
-      order:paginate.sorted(sort),
-  attributes:["firstName","lastName","email","id"]}).then((data) => {
-      const response = paginate.getPagingData(data, page, limit);
-      res.status(StatusCodes.OK).json(response);
-  });
-
-
+const getUserList = async (req, res) => {
+    const { page, size, search, sortKey, sortOrder } = req.query;
+    var condition = search
+        ? {
+              [Op.or]: [
+                  { firstName: { [Op.like]: `%${search}%` } },
+                  { email: { [Op.like]: `%${search}%` } },
+                  { lastName: { [Op.like]: `%${search}%` } },
+              ],
+          }
+        : null;
+    const { limit, offset } = paginate.getPagination(page, size);
+    //console.log(paginate.sorted(sort));
+    await User.findAndCountAll({
+        where: condition,
+        limit,
+        offset,
+        order: [[sortKey || "createdBy", sortOrder || "ASC"]],
+        attributes: ["firstName", "lastName", "email", "id","image"],
+    }).then((data) => {
+        const response = paginate.getPagingData(data, page, limit);
+        res.status(StatusCodes.OK).json(response);
+    });
 };
 
-
-module.exports = { sendInvite, resendInvite, cancelUser,getUserList };
+module.exports = { sendInvite, resendInvite, cancelUser, getUserList };
