@@ -33,7 +33,7 @@ const Register = async (req, res) => {
     //image upload
     if(req.files) {
         const userImage = req.files.image;
-        const key = decoded.email.substring(0,decoded.email. lastIndexOf('@'));
+        var key = decoded.email.substring(0,decoded.email. lastIndexOf('@'));
         if (!userImage.mimetype.endsWith("png")) {
             throw new BadRequestError("Please Upload png Image");
           }
@@ -44,18 +44,19 @@ const Register = async (req, res) => {
           await bucket.upload(userImage,key);
           req.body.image=key;
         }
-    //if(req.body.email!==decoded.email){
-        //throw new BadRequestError("please provide the correct email");
-    //}
-    const userdata = await User.create({firstName:req.body.firstName,lastName:req.body.lastName,address:req.body.address,email:req.body.email,phone:req.body.phone,password:req.body.password,image:req.body.image});
+        //get url
+    const imageUrl = await bucket.getSignedURL(key);
+    const userdata = await User.create({firstName:req.body.firstName,lastName:req.body.lastName,address:req.body.address,email:req.body.email,phone:req.body.phone,password:req.body.password,image:req.body.image,imageUrl:imageUrl});
     await Invite.update({status:"completed"},
     {where:{email:decoded.email}}
     );
+
     res.status(StatusCodes.OK).json({
         email: userdata.email,
         firstName: userdata.firstName,
         lastName: userdata.lastName,
         image:userdata.image,
+        imageurl:userdata.imageUrl,
         message: "registered successfully",
     });
 };
