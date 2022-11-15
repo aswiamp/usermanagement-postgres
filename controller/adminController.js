@@ -80,6 +80,7 @@ const resendInvite = async (req, res) => {
 
 const getUserList = async (req, res) => {
     const { page, size, search, sortKey, sortOrder } = req.query;
+    //
     var condition = search
         ? {
               [Op.or]: [
@@ -90,13 +91,12 @@ const getUserList = async (req, res) => {
           }
         : null;
     const { limit, offset } = paginate.getPagination(page, size);
-    //console.log(paginate.sorted(sort));
     await User.findAndCountAll({
         where: condition,
         limit,
         offset,
         order: [[sortKey || "createdBy", sortOrder || "ASC"]],
-        attributes: ["firstName", "lastName", "email", "id","image"],
+        attributes: ["firstName", "lastName", "email", "id","image","imageUrl"],
     }).then((data) => {
         const response = paginate.getPagingData(data, page, limit);
         res.status(StatusCodes.OK).json(response);

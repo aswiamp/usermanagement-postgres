@@ -1,4 +1,5 @@
 const AWS = require("aws-sdk");
+const CustomAPIError = require("../errors/custom-error");
 
 //initialize S3 instance
 
@@ -20,3 +21,14 @@ exports.upload = async (file, key) => {
     //uploading files to bucket
     await s3.upload(parameters).promise();
 };
+exports.getSignedURL = async(key) => {
+    const url = await s3.getSignedUrlPromise('getObject',{
+            Bucket : process.env.S3_BUCKET,
+            Key : key,
+            Expires : 60*5
+        });
+        if(!url) {
+            throw new CustomAPIError("image not exist in bucket");
+        }
+        return url;
+    };
