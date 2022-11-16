@@ -100,4 +100,42 @@ const querySchema = (req, res, next) => {
         next();
     }
 };
-module.exports = { userReg, inviteSchema, paramsSchema, querySchema };
+const updateSchema = (req, res, next) => {
+    //create schema object
+    const schema = joi.object({
+        firstName: joi
+            .string()
+            .regex(/^[A-Z]+$/)
+            .uppercase()
+            .optional(),
+        lastName: joi
+            .string()
+            .regex(/^[A-Z]+$/)
+            .uppercase()
+            .optional(),
+        phone: joi
+            .string()
+            .length(10)
+            .regex(/^[0-9]{10}$/)
+            .optional(),
+        image: joi.string(),
+        address: joi.object({
+            city: joi.string().required(),
+            state: joi.string().required(),
+            country: joi.string().required(),
+        }),
+    });
+    //schema options
+    const options = {
+        abortEarly: false, //include all errors
+    };
+    //validate request body
+    const { error, value } = schema.validate(req.body, options);
+    if (error) {
+        throw new CustomAPIError(`validation error:${error.message}`);
+    } else {
+        req.body = value;
+        next();
+    }
+};
+module.exports = { userReg, inviteSchema, paramsSchema, querySchema,updateSchema };

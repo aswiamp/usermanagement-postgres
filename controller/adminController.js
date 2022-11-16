@@ -2,15 +2,16 @@ const jwt = require("../utills/jwt");
 const db = require("../models");
 const User = db.user;
 const Invite = db.invite;
+const Details = db.userdetails;
 const { StatusCodes } = require("http-status-codes");
 const transporter = require("../utills/sendMail");
 const CustomAPIError = require("../errors/custom-error");
 const paginate = require("../utills/paginate");
 const { Op } = require("sequelize");
+const bucket = require("../utills/s3bucket");
 
 //sending invite mail
 const sendInvite = async (req, res) => {
-    await Invite.create({ name: req.body.name, email: req.body.email });
     const accessToken = jwt.generateAccessToken(req.body.email);
     const registerURL = `${req.protocol}://${req.get(
         "host"
@@ -26,6 +27,10 @@ const sendInvite = async (req, res) => {
             <br>This link will expire after 1 day`,
     };
     await transporter.sendMail(options);
+    const invite = await Invite.create({ name: req.body.name, email: req.body.email });
+
+    //update emailinvite details
+    await Details.create({email:invite.email,emailInviteStatus:"sent",inviteSentAt:invite.createdAt});
     res.status(StatusCodes.OK).json({
         message: `Invite sent successfully to user ${req.body.email}`,
     });
@@ -96,11 +101,46 @@ const getUserList = async (req, res) => {
         limit,
         offset,
         order: [[sortKey || "createdBy", sortOrder || "ASC"]],
-        attributes: ["firstName", "lastName", "email", "id","image","imageUrl"],
+        attributes: ["firstName", "lastName", "email", "id","image"],
     }).then((data) => {
         const response = paginate.getPagingData(data, page, limit);
         res.status(StatusCodes.OK).json(response);
     });
+    
+};
+//user details
+const getUser = async(req,res) => {   
+const user = await User.findOne({
+      where : {id :req.params.id},
+      attributes:['id','firstName','lastName','email','phone','image']
+  });
+  if (!user) {
+    throw new CustomAPIError("no user with this id");
+  }
+  if(user.image) {
+    var image = await bucket.getSignedURL(user.image);
+          };
+          res.status(StatusCodes.OK).json({ id : user.id,
+            firstName : user.firstName,
+            lastName : user.lastName,
+            email : user.email,
+            phone : user.phone,
+            imageURl : image});
+      };
+          
+//userhistory
+const userHistory = async(req,res)=>
+{
+  const user= await Invite.findByPk(req.params.id);
+    if (!user) {
+        throw new CustomAPIError("no user with this id");
+    }
+    const userDetails = await Details.findOne({
+      where : { id :req.params.id },
+      attributes:['email','emailInviteStatus','inviteSentAt','registerStatus','registeredAt',]
+  });
+  res.status(StatusCodes.OK).json(userDetails);
+  
 };
 
-module.exports = { sendInvite, resendInvite, cancelUser, getUserList };
+module.exports = { sendInvite, resendInvite, cancelUser, getUserList,getUser,userHistory };
