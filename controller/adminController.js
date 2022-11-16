@@ -96,16 +96,17 @@ const getUserList = async (req, res) => {
           }
         : null;
     const { limit, offset } = paginate.getPagination(page, size);
-    await User.findAndCountAll({
+    const user=await User.findAndCountAll({
         where: condition,
         limit,
         offset,
         order: [[sortKey || "createdBy", sortOrder || "ASC"]],
         attributes: ["firstName", "lastName", "email", "id","image"],
-    }).then((data) => {
-        const response = paginate.getPagingData(data, page, limit);
-        res.status(StatusCodes.OK).json(response);
     });
+      
+        const response = paginate.getPagingData(user, page, limit);
+        res.status(StatusCodes.OK).json(response);
+    
     
 };
 //user details

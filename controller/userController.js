@@ -66,7 +66,6 @@ const Register = async (req, res) => {
 //update user details
 const update = async(req,res)=>
 {
-    
     const user = await User.findByPk( req.params.id);
     if (!user) {
         throw new CustomAPIError("no user with this id");
