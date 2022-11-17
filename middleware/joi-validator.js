@@ -84,8 +84,8 @@ const querySchema = (req, res, next) => {
         page: joi.number().min(0).max(100).default(0),
         size: joi.number().min(1).max(750).default(2),
         search: joi.string(),
-        sortKey: joi.string().valid("firstName","email","lastName","phone"),
-        sortOrder:joi.string().valid("ASC","DESC")
+        sortKey: joi.string().valid("firstName", "email", "lastName", "phone"),
+        sortOrder: joi.string().valid("ASC", "DESC"),
     });
     //schema options
     const options = {
@@ -138,4 +138,10 @@ const updateSchema = (req, res, next) => {
         next();
     }
 };
-module.exports = { userReg, inviteSchema, paramsSchema, querySchema,updateSchema };
+module.exports = {
+    userReg,
+    inviteSchema,
+    paramsSchema,
+    querySchema,
+    updateSchema,
+};

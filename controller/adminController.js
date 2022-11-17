@@ -85,7 +85,7 @@ const resendInvite = async (req, res) => {
 
 const getUserList = async (req, res) => {
     const { page, size, search, sortKey, sortOrder } = req.query;
-    //
+    //searching 
     var condition = search
         ? {
               [Op.or]: [
@@ -103,7 +103,6 @@ const getUserList = async (req, res) => {
         order: [[sortKey || "createdBy", sortOrder || "ASC"]],
         attributes: ["firstName", "lastName", "email", "id","image"],
     });
-      
         const response = paginate.getPagingData(user, page, limit);
         res.status(StatusCodes.OK).json(response);
     

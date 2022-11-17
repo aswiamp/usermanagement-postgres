@@ -14,25 +14,25 @@ module.exports = {
                 type: Sequelize.INTEGER,
             },
             email: {
-              type: Sequelize.STRING,
-              unique: true,
-          },
-          emailInviteStatus: {
-              type:Sequelize.STRING,
-              values: ["sent", "failed"]
-          },
-          inviteSentAt: {
-              type: Sequelize.DATE,
-          },
-          registerStatus: {
-              type:Sequelize.STRING,
-              values: ["waiting", "completed"],
-              defaultValue : 'waiting'
-          },
-          registeredAt: {
-              type: Sequelize.DATE,                
-          },
-      });  
+                type: Sequelize.STRING,
+                unique: true,
+            },
+            emailInviteStatus: {
+                type: Sequelize.STRING,
+                values: ["sent", "failed"],
+            },
+            inviteSentAt: {
+                type: Sequelize.DATE,
+            },
+            registerStatus: {
+                type: Sequelize.STRING,
+                values: ["waiting", "completed"],
+                defaultValue: "waiting",
+            },
+            registeredAt: {
+                type: Sequelize.DATE,
+            },
+        });
     },
     // eslint-disable-next-line no-unused-vars
     async down(queryInterface, Sequelize) {

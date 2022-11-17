@@ -18,25 +18,25 @@ module.exports = (sequelize, DataTypes) => {
                 unique: true,
             },
             emailInviteStatus: {
-                type:DataTypes.STRING,
-                values: ["sent", "failed"]
+                type: DataTypes.STRING,
+                values: ["sent", "failed"],
             },
             inviteSentAt: {
                 type: DataTypes.DATE,
             },
             registerStatus: {
-                type:DataTypes.STRING,
+                type: DataTypes.STRING,
                 values: ["waiting", "completed"],
-                defaultValue : 'waiting'
+                defaultValue: "waiting",
             },
             registeredAt: {
-                type: DataTypes.DATE,                
+                type: DataTypes.DATE,
             },
         },
         {
             sequelize,
             modelName: "userdetails",
-            timestamps:false
+            timestamps: false,
         }
     );
     return userdetails;
