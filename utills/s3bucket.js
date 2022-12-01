@@ -21,14 +21,29 @@ exports.upload = async (file, key) => {
     //uploading files to bucket
     await s3.upload(parameters).promise();
 };
-exports.getSignedURL = async (key) => {
-    const url = await s3.getSignedUrlPromise("getObject", {
-        Bucket: process.env.S3_BUCKET,
-        Key: key,
-        Expires: 60 * 5,
-    });
-    if (!url) {
-        throw new CustomAPIError("image not exist in bucket");
+exports.getSignedURL = async(key) => {
+    try{
+        const params = {
+            Bucket : process.env.S3_BUCKET,
+            Key : key
+        };
+        //check if obj exists in the bucket
+        await s3.headObject(params).promise();
+    const url = await s3.getSignedUrlPromise('getObject',{
+            Bucket : process.env.S3_BUCKET,
+            Key : key,
+            Expires : 60*5
+        });
+        if(url) {
+            return url;
+        } 
+        if(!url) {
+            throw new CustomAPIError("something went wrong");
+        }
+
+    } catch(err) {
+        if(err.name === 'NotFound') {
+            return null;
+        }
     }
-    return url;
 };

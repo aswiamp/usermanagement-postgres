@@ -29,8 +29,18 @@ module.exports = (sequelize, DataTypes) => {
                 values: ["waiting", "completed"],
                 defaultValue: "waiting",
             },
+            registerId: {
+                type: DataTypes.INTEGER,
+                references: {
+                    model: "users",
+                    key: "id",
+                },
+            },
             registeredAt: {
                 type: DataTypes.DATE,
+            },
+            invitedBy: {
+                type: DataTypes.STRING,
             },
         },
         {

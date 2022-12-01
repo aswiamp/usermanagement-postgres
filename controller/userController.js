@@ -11,6 +11,9 @@ const BadRequestError = require("../errors/badRequestError");
 const { decode } = require("jsonwebtoken");
 const bucket = require("../utills/s3bucket");
 const CustomAPIError = require("../errors/custom-error");
+//const { Op } = require("sequelize");
+const moment = require("moment");
+const Password = db.user_password;
 
 //user registration
 const Register = async (req, res) => {
@@ -55,13 +58,18 @@ const Register = async (req, res) => {
         address: req.body.address,
         email: req.body.email,
         phone: req.body.phone,
-        password: req.body.password,
         image: req.body.image,
+        passwordExpiry: moment().add(5, 'days').format(),
     });
+    await Password.create({password:req.body.password,createdBy:userdata.fullName,userId:userdata.id});
 
     //updated registerdetails
     await Details.update(
-        { registeredAt: userdata.createdAt, registerStatus: "completed" },
+        {
+            registeredAt: userdata.createdAt,
+            registerStatus: "completed",
+            registerId: userdata.id,
+        },
         { where: { email: decoded.email } }
     );
     await Invite.update(
@@ -96,6 +104,7 @@ const update = async (req, res) => {
         await bucket.upload(userImage, key);
         req.body.image = key;
     }
+    //to update the user details
     await User.update(
         {
             firstName: req.body.firstName,
@@ -116,4 +125,81 @@ const update = async (req, res) => {
         },
     });
 };
-module.exports = { Register, update };
+//user login
+const login = async (req, res) => {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+        throw new BadRequestError("Please provide email and password");
+    }
+    const user = await User.findOne({ where: { email: email } });
+    const invite = await Invite.findOne({ where: { email: email } });
+
+    if (!user) {
+        throw new BadRequestError("Invalid Credentials");
+    }
+    //checking user action
+    if (invite.action === false) {
+        throw new UnauthorizedError(
+            "cannot access,user is restricted to log in "
+        );
+    }
+    //checking if password expired
+    if(moment(user.passwordExpiry).format('YYYY-MM-DD')===moment().format('YYYY-MM-DD')){ 
+        throw new BadRequestError("password expired");
+    }
+    const accessToken = jwt.generateAccessToken(req.body.email);
+    //reset url
+    const resetlink = `${req.protocol}://${req.get('host')}/api/v1/user/resetpassword/${accessToken}`;
+    res.status(StatusCodes.OK).json({
+        user: {
+            name: user.name,
+            userId: user.id,
+            accessToken,
+            resetlink,
+            loginedAt: new Date(),
+        },
+    });
+};
+//password change
+const resetPassword = async (req, res) => {
+    const token = req.params.token;
+    //verify token
+    await jwt.verifyToken(token);
+    
+    const email = req.body.email;
+    const password = req.body.password;
+    const user = await User.findOne({ where: { email: email } });
+    if (!user) {
+        throw new UnauthenticatedError("User not found");
+    }
+    
+    const user_passwords=await Password.findAll({
+        where : { userId : user.id},
+        order: [['createdAt','DESC']],
+       });
+       
+    const passwords=user_passwords.map(pass=>pass.password);
+
+    const passwordMatch = await bcrypt.verifyPassword(password, passwords[0]);
+    if(!passwordMatch){
+           throw new BadRequestError("password not match");
+       }
+    const newPassword=await bcrypt.hashPassword(req.body.newPassword);
+    const passwordMatchone = await bcrypt.verifyPassword(req.body.newPassword, passwords[0]);
+    const passwordMatchtwo = await bcrypt.verifyPassword(req.body.newPassword, passwords[1]);
+    const passwordMatchthree=await bcrypt.verifyPassword(req.body.newPassword,passwords[2]);
+
+    if(!passwordMatchone&&!passwordMatchtwo&&!passwordMatchthree){
+    await Password.create({password:newPassword,createdBy:user.fullName,userId:user.id});
+    await User.update({passwordExpiry:moment().add(5, 'days').format()},
+     {where:{email:user.email}});
+    }
+    else{
+        throw new BadRequestError("new password cannot be previous password");
+    }
+    
+    res.status(StatusCodes.CREATED).json({message:"password reset successful"});
+};
+
+module.exports = { Register, update, login, resetPassword };

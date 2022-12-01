@@ -12,6 +12,7 @@ const bucket = require("../utills/s3bucket");
 
 //sending invite mail
 const sendInvite = async (req, res) => {
+    const userName = req.user.username;
     const accessToken = jwt.generateAccessToken(req.body.email);
     const registerURL = `${req.protocol}://${req.get(
         "host"
@@ -30,7 +31,7 @@ const sendInvite = async (req, res) => {
     const invite = await Invite.create({ name: req.body.name, email: req.body.email });
 
     //update emailinvite details
-    await Details.create({email:invite.email,emailInviteStatus:"sent",inviteSentAt:invite.createdAt});
+    await Details.create({email:invite.email,emailInviteStatus:"sent",inviteSentAt:invite.createdAt,invitedBy:userName});
     res.status(StatusCodes.OK).json({
         message: `Invite sent successfully to user ${req.body.email}`,
     });
@@ -101,8 +102,9 @@ const getUserList = async (req, res) => {
         limit,
         offset,
         order: [[sortKey || "createdBy", sortOrder || "ASC"]],
-        attributes: ["firstName", "lastName", "email", "id","image"],
+        attributes: ["firstName", "lastName", "email", "id","image","imageUrl"],
     });
+    console.log(user.rows[0].imageURl);
         const response = paginate.getPagingData(user, page, limit);
         res.status(StatusCodes.OK).json(response);
     
@@ -131,16 +133,29 @@ const user = await User.findOne({
 //userhistory
 const userHistory = async(req,res)=>
 {
-  const user= await Invite.findByPk(req.params.id);
+  const user= await Details.findByPk(req.params.id);
     if (!user) {
         throw new CustomAPIError("no user with this id");
     }
     const userDetails = await Details.findOne({
       where : { id :req.params.id },
-      attributes:['email','emailInviteStatus','inviteSentAt','registerStatus','registeredAt',]
+      attributes:['email','emailInviteStatus','inviteSentAt','registerStatus','registeredAt','invitedBy']
   });
-  res.status(StatusCodes.OK).json(userDetails);
+  res.status(StatusCodes.OK).json({inviteDetails:{Date:userDetails.inviteSentAt,Time:userDetails.inviteSentAt,inviteStatus:userDetails.emailInviteStatus,updatedBy:userDetails.invitedBy},
+registerDetails:{Date:userDetails.registeredAt,Time:userDetails.registeredAt,registerStatus:userDetails.registerStatus,updatedBy:userDetails.invitedBy}});
   
 };
+//restriction
+const restrict = async(req,res) => {
+    const invite = await Invite.findByPk(req.params.id);
+    if (!invite) {
+        throw new CustomAPIError("no user with this id");
+    }
+        await Invite.update(
+            {action : false},
+            {where : {email : invite.email}}
+        );
+    res.status(StatusCodes.OK).json({message:"restricted successfully"});
+    };
 
-module.exports = { sendInvite, resendInvite, cancelUser, getUserList,getUser,userHistory };
+module.exports = { sendInvite, resendInvite, cancelUser, getUserList,getUser,userHistory,restrict};
