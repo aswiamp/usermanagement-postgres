@@ -14,6 +14,10 @@ const CustomAPIError = require("../errors/custom-error");
 //const { Op } = require("sequelize");
 const moment = require("moment");
 const Password = db.user_password;
+const TooManyRequestException = require("../errors/tooManyRequestError");
+const client = require("../utills/redis");
+const maxNumberOfFailedLogins = 5;
+const timeWindowForFailedLogins = 60 * 60 * 1;
 
 //user registration
 const Register = async (req, res) => {
@@ -59,9 +63,13 @@ const Register = async (req, res) => {
         email: req.body.email,
         phone: req.body.phone,
         image: req.body.image,
-        passwordExpiry: moment().add(5, 'days').format(),
+        passwordExpiry: moment().add(5, "days").format(),
     });
-    await Password.create({password:req.body.password,createdBy:userdata.fullName,userId:userdata.id});
+    await Password.create({
+        password: req.body.password,
+        createdBy: userdata.fullName,
+        userId: userdata.id,
+    });
 
     //updated registerdetails
     await Details.update(
@@ -128,6 +136,14 @@ const update = async (req, res) => {
 //user login
 const login = async (req, res) => {
     const { email, password } = req.body;
+    //check user is not attempted too many login requests
+    let attempts = await client.get(email);
+    console.log(attempts);
+    if (attempts > maxNumberOfFailedLogins) {
+        throw new TooManyRequestException(
+            "Too Many Attempts try it one hour later"
+        );
+    }
 
     if (!email || !password) {
         throw new BadRequestError("Please provide email and password");
@@ -136,21 +152,43 @@ const login = async (req, res) => {
     const invite = await Invite.findOne({ where: { email: email } });
 
     if (!user) {
+        client.set(email, ++attempts, "ex", timeWindowForFailedLogins);
         throw new BadRequestError("Invalid Credentials");
     }
     //checking user action
     if (invite.action === false) {
+        client.set(email, ++attempts, "ex", timeWindowForFailedLogins);
         throw new UnauthorizedError(
             "cannot access,user is restricted to log in "
         );
     }
     //checking if password expired
-    if(moment(user.passwordExpiry).format('YYYY-MM-DD')===moment().format('YYYY-MM-DD')){ 
+    if (
+        moment(user.passwordExpiry).format("YYYY-MM-DD") ===
+        moment().format("YYYY-MM-DD")
+    ) {
+        client.set(email, ++attempts, "ex", timeWindowForFailedLogins);
         throw new BadRequestError("password expired");
     }
+    const user_passwords = await Password.findAll({
+        where: { userId: user.id },
+        order: [["createdAt", "DESC"]],
+    });
+    //password verify
+    const passwords = user_passwords.map((pass) => pass.password);
+
+    const passwordMatch = await bcrypt.verifyPassword(password, passwords[0]);
+    if (!passwordMatch) {
+        client.set(email, ++attempts, "ex", timeWindowForFailedLogins);
+        throw new BadRequestError("password not match");
+    }
+    //succesfull login
+    await client.del(email);
     const accessToken = jwt.generateAccessToken(req.body.email);
     //reset url
-    const resetlink = `${req.protocol}://${req.get('host')}/api/v1/user/resetpassword/${accessToken}`;
+    const resetlink = `${req.protocol}://${req.get(
+        "host"
+    )}/api/v1/user/resetpassword/${accessToken}`;
     res.status(StatusCodes.OK).json({
         user: {
             name: user.name,
@@ -166,40 +204,56 @@ const resetPassword = async (req, res) => {
     const token = req.params.token;
     //verify token
     await jwt.verifyToken(token);
-    
+
     const email = req.body.email;
     const password = req.body.password;
     const user = await User.findOne({ where: { email: email } });
     if (!user) {
         throw new UnauthenticatedError("User not found");
     }
-    
-    const user_passwords=await Password.findAll({
-        where : { userId : user.id},
-        order: [['createdAt','DESC']],
-       });
-       
-    const passwords=user_passwords.map(pass=>pass.password);
+
+    const user_passwords = await Password.findAll({
+        where: { userId: user.id },
+        order: [["createdAt", "DESC"]],
+    });
+
+    const passwords = user_passwords.map((pass) => pass.password);
 
     const passwordMatch = await bcrypt.verifyPassword(password, passwords[0]);
-    if(!passwordMatch){
-           throw new BadRequestError("password not match");
-       }
-    const newPassword=await bcrypt.hashPassword(req.body.newPassword);
-    const passwordMatchone = await bcrypt.verifyPassword(req.body.newPassword, passwords[0]);
-    const passwordMatchtwo = await bcrypt.verifyPassword(req.body.newPassword, passwords[1]);
-    const passwordMatchthree=await bcrypt.verifyPassword(req.body.newPassword,passwords[2]);
-
-    if(!passwordMatchone&&!passwordMatchtwo&&!passwordMatchthree){
-    await Password.create({password:newPassword,createdBy:user.fullName,userId:user.id});
-    await User.update({passwordExpiry:moment().add(5, 'days').format()},
-     {where:{email:user.email}});
+    if (!passwordMatch) {
+        throw new BadRequestError("password not match");
     }
-    else{
+    const newPassword = await bcrypt.hashPassword(req.body.newPassword);
+    const passwordMatchone = await bcrypt.verifyPassword(
+        req.body.newPassword,
+        passwords[0]
+    );
+    const passwordMatchtwo = await bcrypt.verifyPassword(
+        req.body.newPassword,
+        passwords[1]
+    );
+    const passwordMatchthree = await bcrypt.verifyPassword(
+        req.body.newPassword,
+        passwords[2]
+    );
+
+    if (!passwordMatchone && !passwordMatchtwo && !passwordMatchthree) {
+        await Password.create({
+            password: newPassword,
+            createdBy: user.fullName,
+            userId: user.id,
+        });
+        await User.update(
+            { passwordExpiry: moment().add(5, "days").format() },
+            { where: { email: user.email } }
+        );
+    } else {
         throw new BadRequestError("new password cannot be previous password");
     }
-    
-    res.status(StatusCodes.CREATED).json({message:"password reset successful"});
+
+    res.status(StatusCodes.CREATED).json({
+        message: "password reset successful",
+    });
 };
 
 module.exports = { Register, update, login, resetPassword };

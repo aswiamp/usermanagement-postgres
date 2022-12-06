@@ -15,7 +15,7 @@ const userReg = (req, res, next) => {
             .uppercase()
             .required(),
         email: joi.string().required().email(),
-        password: joi.string().required().min(4).max(25).alphanum(),
+        password: joi.string().required().min(4).max(25),
         phone: joi
             .string()
             .length(10)
@@ -138,10 +138,52 @@ const updateSchema = (req, res, next) => {
         next();
     }
 };
+const loginSchema = (req, res, next) => {
+    //create schema object
+    const schema = joi.object({
+        email: joi.string().required().email(),
+        password: joi.string().required().min(4).max(25),
+    });
+    //schema options
+    const options = {
+        abortEarly: false, //include all errors
+    };
+    //validate request body
+    const { error, value } = schema.validate(req.body, options);
+    if (error) {
+        throw new CustomAPIError(`validation error:${error.message}`);
+    } else {
+        req.body = value;
+        next();
+    }
+};
+//
+const resetSchema = (req, res, next) => {
+    //create schema object
+    const schema = joi.object({
+        email: joi.string().required().email(),
+        password: joi.string().required().min(4).max(25).alphanum(),
+        newPassword: joi.string().required().min(4).max(25).alphanum(),
+    });
+    //schema options
+    const options = {
+        abortEarly: false, //include all errors
+    };
+    //validate request body
+    const { error, value } = schema.validate(req.body, options);
+    if (error) {
+        throw new CustomAPIError(`validation error:${error.message}`);
+    } else {
+        req.body = value;
+        next();
+    }
+};
 module.exports = {
     userReg,
     inviteSchema,
     paramsSchema,
     querySchema,
     updateSchema,
+    loginSchema,
+    resetSchema,
 };

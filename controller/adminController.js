@@ -28,10 +28,18 @@ const sendInvite = async (req, res) => {
             <br>This link will expire after 1 day`,
     };
     await transporter.sendMail(options);
-    const invite = await Invite.create({ name: req.body.name, email: req.body.email });
+    const invite = await Invite.create({
+        name: req.body.name,
+        email: req.body.email,
+    });
 
     //update emailinvite details
-    await Details.create({email:invite.email,emailInviteStatus:"sent",inviteSentAt:invite.createdAt,invitedBy:userName});
+    await Details.create({
+        email: invite.email,
+        emailInviteStatus: "sent",
+        inviteSentAt: invite.createdAt,
+        invitedBy: userName,
+    });
     res.status(StatusCodes.OK).json({
         message: `Invite sent successfully to user ${req.body.email}`,
     });
@@ -86,7 +94,7 @@ const resendInvite = async (req, res) => {
 
 const getUserList = async (req, res) => {
     const { page, size, search, sortKey, sortOrder } = req.query;
-    //searching 
+    //searching
     var condition = search
         ? {
               [Op.or]: [
@@ -97,65 +105,94 @@ const getUserList = async (req, res) => {
           }
         : null;
     const { limit, offset } = paginate.getPagination(page, size);
-    const user=await User.findAndCountAll({
+    const user = await User.findAndCountAll({
         where: condition,
         limit,
         offset,
         order: [[sortKey || "createdBy", sortOrder || "ASC"]],
-        attributes: ["firstName", "lastName", "email", "id","image","imageUrl"],
+        attributes: [
+            "firstName",
+            "lastName",
+            "email",
+            "id",
+            "image",
+            "imageUrl",
+        ],
     });
     console.log(user.rows[0].imageURl);
-        const response = paginate.getPagingData(user, page, limit);
-        res.status(StatusCodes.OK).json(response);
-    
-    
+    const response = paginate.getPagingData(user, page, limit);
+    res.status(StatusCodes.OK).json(response);
 };
 //user details
-const getUser = async(req,res) => {   
-const user = await User.findOne({
-      where : {id :req.params.id},
-      attributes:['id','firstName','lastName','email','phone','image']
-  });
-  if (!user) {
-    throw new CustomAPIError("no user with this id");
-  }
-  if(user.image) {
-    var image = await bucket.getSignedURL(user.image);
-          };
-          res.status(StatusCodes.OK).json({ id : user.id,
-            firstName : user.firstName,
-            lastName : user.lastName,
-            email : user.email,
-            phone : user.phone,
-            imageURl : image});
-      };
-          
+const getUser = async (req, res) => {
+    const user = await User.findOne({
+        where: { id: req.params.id },
+        attributes: ["id", "firstName", "lastName", "email", "phone", "image"],
+    });
+    if (!user) {
+        throw new CustomAPIError("no user with this id");
+    }
+    if (user.image) {
+        var image = await bucket.getSignedURL(user.image);
+    }
+    res.status(StatusCodes.OK).json({
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        phone: user.phone,
+        imageURl: image,
+    });
+};
+
 //userhistory
-const userHistory = async(req,res)=>
-{
-  const user= await Details.findByPk(req.params.id);
+const userHistory = async (req, res) => {
+    const user = await Details.findByPk(req.params.id);
     if (!user) {
         throw new CustomAPIError("no user with this id");
     }
     const userDetails = await Details.findOne({
-      where : { id :req.params.id },
-      attributes:['email','emailInviteStatus','inviteSentAt','registerStatus','registeredAt','invitedBy']
-  });
-  res.status(StatusCodes.OK).json({inviteDetails:{Date:userDetails.inviteSentAt,Time:userDetails.inviteSentAt,inviteStatus:userDetails.emailInviteStatus,updatedBy:userDetails.invitedBy},
-registerDetails:{Date:userDetails.registeredAt,Time:userDetails.registeredAt,registerStatus:userDetails.registerStatus,updatedBy:userDetails.invitedBy}});
-  
+        where: { id: req.params.id },
+        attributes: [
+            "email",
+            "emailInviteStatus",
+            "inviteSentAt",
+            "registerStatus",
+            "registeredAt",
+            "invitedBy",
+        ],
+    });
+    res.status(StatusCodes.OK).json({
+        inviteDetails: {
+            Date: userDetails.inviteSentAt,
+            Time: userDetails.inviteSentAt,
+            inviteStatus: userDetails.emailInviteStatus,
+            updatedBy: userDetails.invitedBy,
+        },
+        registerDetails: {
+            Date: userDetails.registeredAt,
+            Time: userDetails.registeredAt,
+            registerStatus: userDetails.registerStatus,
+            updatedBy: userDetails.invitedBy,
+        },
+    });
 };
 //restriction
-const restrict = async(req,res) => {
+const restrict = async (req, res) => {
     const invite = await Invite.findByPk(req.params.id);
     if (!invite) {
         throw new CustomAPIError("no user with this id");
     }
-        await Invite.update(
-            {action : false},
-            {where : {email : invite.email}}
-        );
-    res.status(StatusCodes.OK).json({message:"restricted successfully"});
-    };
+    await Invite.update({ action: false }, { where: { email: invite.email } });
+    res.status(StatusCodes.OK).json({ message: "restricted successfully" });
+};
 
-module.exports = { sendInvite, resendInvite, cancelUser, getUserList,getUser,userHistory,restrict};
+module.exports = {
+    sendInvite,
+    resendInvite,
+    cancelUser,
+    getUserList,
+    getUser,
+    userHistory,
+    restrict,
+};

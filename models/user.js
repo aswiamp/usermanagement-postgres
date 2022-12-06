@@ -11,7 +11,7 @@ module.exports = (sequelize, DataTypes) => {
          */
         static associate() {
             //define association here
-           // user.hasMany(model.user_password,{ foreignKey: 'id' });
+            // user.hasMany(model.user_password,{ foreignKey: 'id' });
         }
     }
     user.init(
@@ -22,12 +22,16 @@ module.exports = (sequelize, DataTypes) => {
             address: DataTypes.JSON,
             phone: DataTypes.STRING,
             image: DataTypes.STRING,
-            passwordExpiry:DataTypes.DATEONLY,
-            fullName:{
-                type:DataTypes.VIRTUAL,
-                get(){
-                    return this.getDataValue("firstName")+" "+this.getDataValue("lastName");
-                }
+            passwordExpiry: DataTypes.DATEONLY,
+            fullName: {
+                type: DataTypes.VIRTUAL,
+                get() {
+                    return (
+                        this.getDataValue("firstName") +
+                        " " +
+                        this.getDataValue("lastName")
+                    );
+                },
             },
             imageUrl: {
                 type: DataTypes.VIRTUAL,
