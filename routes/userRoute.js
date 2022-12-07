@@ -10,6 +10,11 @@ const {
 } = require("../controller/userController");
 const { passwordStrengthCheck } = require("../middleware/passwordStrength");
 const validationMiddleware = require("../middleware/joi-validator");
+const limiter = rateLimit({
+    max: 5,
+    windowMs: 5 * 60 * 1000,
+});
+router.use(limiter);
 router.post(
     "/register/:token",
     validationMiddleware.userReg,
@@ -17,15 +22,6 @@ router.post(
     Register
 );
 router.patch("/update/:id", validationMiddleware.updateSchema, update);
-router.use(
-    "/login",
-    rateLimit({
-        //limit each ip to 5 request per window
-        max: 5,
-        //5 minutes
-        windowsMS: 1000 * 60 * 5,
-    })
-);
 router.post("/login", validationMiddleware.loginSchema, login);
 router.post(
     "/resetpassword/:token",
