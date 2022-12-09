@@ -10,6 +10,17 @@
         "lint:check": "eslint .",
         "lint:fix": "eslint --fix ."
     },
+    "husky": {
+        "hooks": {
+            "pre-commit": "lint-staged"
+        }
+    },
+    "lint-staged": {
+        "**/*.js" : [
+            "eslint --fix" ,
+            "git add"
+        ]
+    },
     "author": "",
     "license": "ISC",
     "dependencies": {
@@ -36,6 +47,8 @@
     "devDependencies": {
         "eslint": "^8.26.0",
         "eslint-config-prettier": "^8.5.0",
+        "husky": "^8.0.2",
+        "lint-staged": "^13.1.0",
         "nodemon": "^2.0.20",
         "prettier": "^2.7.1"
     }
