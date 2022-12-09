@@ -21,7 +21,7 @@ const timeWindowForFailedLogins = 60 * 60 * 1;
 
 //user registration
 const Register = async (req, res) => {
-    const token = req.params.token;
+    var token = req.params.token;
     //verify token
     await jwt.verifyToken(token);
     //decod token
