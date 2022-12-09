@@ -8,18 +8,16 @@
         "format:check": "prettier --check .",
         "format:write": "prettier --write .",
         "lint:check": "eslint .",
-        "lint:fix": "eslint --fix ."
-    },
-    "husky": {
-        "hooks": {
-            "pre-commit": "npx lint-staged"
-        }
+        "lint:fix": "eslint --fix .",
+        "prepare": "husky install"
     },
     "lint-staged": {
-        "**/*.js" : [
-            "eslint --fix" ,
+        "**/*.js": [
+            "eslint --fix",
             "git add"
-        ]
+        ],
+        "*.js": "eslint --cache --fix",
+        "*.{js,css,md}": "prettier --write"
     },
     "author": "",
     "license": "ISC",
