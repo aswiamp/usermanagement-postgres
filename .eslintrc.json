@@ -13,6 +13,6 @@
         "semi": ["error", "always"],
         "no-console": "off",
         "no-unused-vars": "error",
-        "prefer-const": "error" 
+        "prefer-const": "off" 
     }
 }
