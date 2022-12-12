@@ -21,12 +21,14 @@ const timeWindowForFailedLogins = 60 * 60 * 1;
 
 //user registration
 const Register = async (req, res) => {
-    var token = req.params.token;
+    const token = req.params.token;
     //verify token
     await jwt.verifyToken(token);
     //decod token
+    // eslint-disable-next-line no-var
     var decoded = decode(token);
     //const { email } =decoded.email;
+
     const inviteUser = await Invite.findOne({
         where: { email: decoded.email },
     });
@@ -44,7 +46,7 @@ const Register = async (req, res) => {
     //image upload
     if (req.files) {
         const userImage = req.files.image;
-        var key = decoded.email.substring(0, decoded.email.lastIndexOf("@"));
+        const key = decoded.email.substring(0, decoded.email.lastIndexOf("@"));
         if (!userImage.mimetype.endsWith("png")) {
             throw new BadRequestError("Please Upload png Image");
         }
@@ -101,7 +103,7 @@ const update = async (req, res) => {
     }
     if (req.files) {
         const userImage = req.files.image;
-        var key = user.email.substring(0, user.email.lastIndexOf("@"));
+        const key = user.email.substring(0, user.email.lastIndexOf("@"));
         if (!userImage.mimetype.endsWith("png")) {
             throw new BadRequestError("Please Upload png Image");
         }

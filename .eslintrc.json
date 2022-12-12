@@ -16,7 +16,8 @@
         "prefer-const":["error", {
             "destructuring": "any",
             "ignoreReadBeforeAssign": false
-        }]
+        }],
+        "no-var":"error"
     }
 }
 
