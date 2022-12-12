@@ -13,6 +13,12 @@
         "semi": ["error", "always"],
         "no-console": "off",
         "no-unused-vars": "error",
-        "prefer-const": "off" 
+        "prefer-const":["error", {
+            "destructuring": "any",
+            "ignoreReadBeforeAssign": false
+        }]
     }
 }
+
+
+
