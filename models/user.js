@@ -38,6 +38,7 @@ module.exports = (sequelize, DataTypes) => {
                 get() {
                     {
                         if (this.image !== null) {
+                            // eslint-disable-next-line no-var
                             var result = bucket.getSignedURL(this.image);
                             //console.log(result);
                             return result;
