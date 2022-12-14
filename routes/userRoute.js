@@ -1,10 +1,32 @@
 const express = require("express");
 const router = express.Router();
-const fileUpload = require("express-fileupload");
+const rateLimit = require("express-rate-limit");
 
-const { Register } = require("../controller/userController");
+const {
+    Register,
+    update,
+    login,
+    resetPassword,
+} = require("../controller/userController");
+const { passwordStrengthCheck } = require("../middleware/passwordStrength");
 const validationMiddleware = require("../middleware/joi-validator");
-router.use("/register/:token", fileUpload({ useTempFiles: false }));
-router.post("/register/:token", validationMiddleware.userReg, Register);
+const limiter = rateLimit({
+    max: 5,
+    windowMs: 5 * 60 * 1000,
+});
+router.use(limiter);
+router.post(
+    "/register/:token",
+    validationMiddleware.userReg,
+    passwordStrengthCheck,
+    Register
+);
+router.patch("/update/:id", validationMiddleware.updateSchema, update);
+router.post("/login", validationMiddleware.loginSchema, login);
+router.post(
+    "/resetpassword/:token",
+    validationMiddleware.resetSchema,
+    resetPassword
+);
 
 module.exports = router;
