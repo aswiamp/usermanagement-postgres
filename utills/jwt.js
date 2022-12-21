@@ -16,3 +16,13 @@ exports.verifyToken = (token) => {
         });
     });
 };
+
+exports.generateAdminToken = (user, pass) => {
+    return jwt.sign(
+        { username: user, password: pass },
+        process.env.JWT_SECRET,
+        {
+            expiresIn: process.env.JWT_LIFETIME,
+        }
+    );
+};

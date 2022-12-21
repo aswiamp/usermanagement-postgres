@@ -12,6 +12,14 @@
     "rules": {
         "semi": ["error", "always"],
         "no-console": "off",
-        "no-unused-vars": "error"
+        "no-unused-vars": "error",
+        "prefer-const":["error", {
+            "destructuring": "any",
+            "ignoreReadBeforeAssign": false
+        }],
+        "no-var":"error"
     }
 }
+
+
+

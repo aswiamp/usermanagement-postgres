@@ -5,6 +5,7 @@ exports.getPagination = (page, size) => {
 
     return { limit, offset };
 };
+
 exports.getPagingData = (data, page, limit) => {
     const { count: totalItems, rows: users } = data;
     const currentPage = page ? +page : 0;
