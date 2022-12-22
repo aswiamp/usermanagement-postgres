@@ -4,6 +4,7 @@ require("express-async-errors");
 const db = require("./models");
 const userRouter = require("./routes/userRoute");
 const adminRouter = require("./routes/adminRoute");
+const businessRouter = require("./routes/businessRoutes");
 const notFoundMiddleWare = require("./middleware/notFound");
 const errorHandlerMiddleware = require("./middleware/error-handler");
 //const report = require("./controller/reportController");
@@ -25,6 +26,7 @@ console.log(a);
 //routes
 app.use("/api/v1/user", userRouter);
 app.use("/api/v1/admin", authenticationMiddleWare, adminRouter);
+app.use("/api/v1/business", businessRouter);
 
 //middleware
 app.use(notFoundMiddleWare);
