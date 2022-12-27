@@ -1,75 +1,75 @@
 const { Model } = require("sequelize");
 
 module.exports = (sequelize, DataTypes) => {
-    class Business extends Model {
+    class UserAssociation extends Model {
         // Helper method for defining associations.
         // This method is not a part of Sequelize lifecycle.
         // The `models/index` file will call this method automatically.
         static associate() {}
     }
-    Business.init(
+    UserAssociation.init(
         {
-            business_id: {
+            business_user_assoc_id: {
                 allowNull: false,
-                autoIncrement: true,
                 primaryKey: true,
+                autoIncrement: true,
                 type: DataTypes.BIGINT,
             },
-            isactive: {
+            is_active: {
                 type: DataTypes.ENUM("Y", "N"),
                 defaultValue: "Y",
             },
-            created: {
+            createdAt: {
                 type: DataTypes.DATE,
             },
-            createdby: {
+            createdBy: {
                 type: DataTypes.STRING,
                 allowNull: false,
             },
-            updated: {
+            updatedAt: {
                 type: DataTypes.DATE,
             },
-            updatedby: {
+            updatedBy: {
                 type: DataTypes.STRING,
             },
-            short_name: {
-                type: DataTypes.STRING(50),
-                allowNull: false,
-            },
-            name: {
+            description: {
                 type: DataTypes.STRING,
                 allowNull: false,
             },
-            is_approved: {
-                type: DataTypes.ENUM("Y", "N"),
-                defaultValue: "N",
-            },
-            dba: {
+            user_assoc_role: {
                 type: DataTypes.STRING,
+                allowNull: false,
             },
-            fedtaxid: {
+            UserId: {
+                allowNull: false,
+                type: DataTypes.BIGINT,
+            },
+            business_id: {
+                allowNull: false,
+                type: DataTypes.BIGINT,
+            },
+            investor_type_id: {
                 type: DataTypes.INTEGER,
             },
-            is_cannabis_business: {
-                type: DataTypes.ENUM("Y", "N"),
-                defaultValue: "Y",
+            investor_type_comment: {
+                type: DataTypes.STRING,
             },
-            is_approved_vendor: {
-                type: DataTypes.ENUM("Y", "N"),
-                defaultValue: "N",
+            user_assoc_id: {
+                allowNull: false,
+                type: DataTypes.BIGINT,
             },
-            is_createdby_stdc: {
-                type: DataTypes.ENUM("Y", "N"),
+            is_contact_person: {
+                type: DataTypes.STRING,
                 defaultValue: "N",
             },
         },
         {
             sequelize,
-            modelName: Business.name,
-            tableName: "business",
-            timestamps: false,
+            modelName: UserAssociation.name,
+            tableName: "userassociation",
+            timestamps: true,
         }
     );
 
-    return Business;
+    return UserAssociation;
 };
