@@ -7,6 +7,12 @@ const { sequelize } = require("../models");
 module.exports = {
     async up(queryInterface, Sequelize) {
         await queryInterface.createTable("licensetype", {
+            id: {
+                allowNull: false,
+                autoIncrement: true,
+                primaryKey: true,
+                type: Sequelize.INTEGER,
+            },
             bp_license_type_id: {
                 type: Sequelize.STRING,
             },
