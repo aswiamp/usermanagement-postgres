@@ -41,6 +41,12 @@ module.exports = (sequelize, DataTypes) => {
             license_state_region_id: {
                 type: DataTypes.BIGINT,
             },
+            country_id: {
+                type: DataTypes.STRING,
+            },
+            cannabis_license_id: {
+                type: DataTypes.BIGINT,
+            },
         },
         {
             sequelize,

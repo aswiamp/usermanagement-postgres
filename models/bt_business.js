@@ -19,22 +19,12 @@ module.exports = (sequelize, DataTypes) => {
                 type: DataTypes.ENUM("Y", "N"),
                 defaultValue: "Y",
             },
-            created: {
-                type: DataTypes.DATE,
-            },
             createdby: {
                 type: DataTypes.STRING,
                 allowNull: false,
             },
-            updated: {
-                type: DataTypes.DATE,
-            },
             updatedby: {
                 type: DataTypes.STRING,
-            },
-            short_name: {
-                type: DataTypes.STRING(50),
-                allowNull: false,
             },
             name: {
                 type: DataTypes.STRING,
@@ -62,12 +52,15 @@ module.exports = (sequelize, DataTypes) => {
                 type: DataTypes.ENUM("Y", "N"),
                 defaultValue: "N",
             },
+            state_id: {
+                type: DataTypes.BIGINT,
+            },
         },
         {
             sequelize,
             modelName: Business.name,
             tableName: "business",
-            timestamps: false,
+            timestamps: true,
         }
     );
 

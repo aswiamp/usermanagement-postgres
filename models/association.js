@@ -19,15 +19,9 @@ module.exports = (sequelize, DataTypes) => {
                 type: DataTypes.ENUM("Y", "N"),
                 defaultValue: "Y",
             },
-            createdAt: {
-                type: DataTypes.DATE,
-            },
             createdBy: {
                 type: DataTypes.STRING,
                 allowNull: false,
-            },
-            updatedAt: {
-                type: DataTypes.DATE,
             },
             updatedBy: {
                 type: DataTypes.STRING,
@@ -51,22 +45,29 @@ module.exports = (sequelize, DataTypes) => {
             investor_type_id: {
                 type: DataTypes.INTEGER,
             },
-            investor_type_comment: {
-                type: DataTypes.STRING,
-            },
             user_assoc_id: {
                 allowNull: false,
                 type: DataTypes.BIGINT,
             },
+
             is_contact_person: {
                 type: DataTypes.STRING,
                 defaultValue: "N",
+            },
+            ownership_percent: {
+                type: DataTypes.BIGINT,
+            },
+            name: {
+                type: DataTypes.STRING,
+            },
+            email: {
+                type: DataTypes.STRING,
             },
         },
         {
             sequelize,
             modelName: UserAssociation.name,
-            tableName: "userassociation",
+            tableName: "user_association",
             timestamps: true,
         }
     );

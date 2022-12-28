@@ -7,6 +7,12 @@ const { sequelize } = require("../models");
 module.exports = {
     async up(queryInterface, Sequelize) {
         await queryInterface.createTable("userassociation", {
+            id: {
+                allowNull: false,
+                autoIncrement: true,
+                primaryKey: true,
+                type: Sequelize.INTEGER,
+            },
             bp_user_association_id: {
                 type: Sequelize.STRING,
             },
