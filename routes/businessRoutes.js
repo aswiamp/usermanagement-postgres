@@ -8,8 +8,8 @@ const {
     getregionTypeList,
     getinvestorTypeList,
     getlicenseTypedesignList,
-    registerCannabis,
-    registernonCannabis,
+    getAllBusiness,
+    registerBusiness,
 } = require("../controller/businessController");
 const router = express.Router();
 const authenticate = require("../middleware/authenticate");
@@ -22,9 +22,9 @@ router.get("/getalllicensetype", getlicenseTypeList);
 router.get("/getallregion", getregionTypeList);
 router.get("/getallinvestortype", getinvestorTypeList);
 router.post(
-    "/registercannabisbusiness",
+    "/registerbusiness",
     validationMiddleware.cannabisBusiness,
-    registerCannabis
+    registerBusiness
 );
-router.post("/registercannabisbusiness", registernonCannabis);
+router.get("/getallbusiness", getAllBusiness);
 module.exports = router;
