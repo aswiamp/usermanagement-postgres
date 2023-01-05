@@ -1,4 +1,5 @@
 const CustomAPIError = require("../errors/custom-error");
+const badRequestError = require("../errors/badRequestError");
 const joi = require("joi");
 
 const userReg = (req, res, next) => {
@@ -215,25 +216,37 @@ const cannabisBusiness = (req, res, next) => {
                 phone_type: joi.string().uuid().required(),
             },
             business_location: {
-                isBusinessLocationSameAsLegalAddress: joi
+                is_business_location_sameas_legal_address: joi
                     .string()
                     .valid("Y", "N")
                     .required(),
-                zipcode: joi.when("isBusinessLocationSameAsLegalAddress", {
+                zipcode: joi.when("is_business_location_sameas_legal_address", {
                     is: "N",
                     then: joi.string().trim().max(8).required(),
                     otherwise: joi.forbidden(),
                 }),
-                street_no: joi.when("isBusinessLocationSameAsLegalAddress", {
-                    is: "N",
-                    then: joi.string().max(5).required(),
-                    otherwise: joi.forbidden(),
-                }),
-                street_name: joi.when("isBusinessLocationSameAsLegalAddress", {
-                    is: "N",
-                    then: joi.string().trim().min(3).max(50).trim().required(),
-                    otherwise: joi.forbidden(),
-                }),
+                street_no: joi.when(
+                    "is_business_location_sameas_legal_address",
+                    {
+                        is: "N",
+                        then: joi.string().max(5).required(),
+                        otherwise: joi.forbidden(),
+                    }
+                ),
+                street_name: joi.when(
+                    "is_business_location_sameas_legal_address",
+                    {
+                        is: "N",
+                        then: joi
+                            .string()
+                            .trim()
+                            .min(3)
+                            .max(50)
+                            .trim()
+                            .required(),
+                        otherwise: joi.forbidden(),
+                    }
+                ),
             },
         },
         key_person_registration: {
@@ -282,6 +295,32 @@ const cannabisBusiness = (req, res, next) => {
     //validate request body
     const { error, value } = schema.validate(req.body, options);
     if (error) {
+        throw new badRequestError(`validation error:${error.message}`);
+    } else {
+        req.body = value;
+        next();
+    }
+};
+
+const querySchemaBusinessList = (req, res, next) => {
+    //create schema object
+    const schema = joi.object({
+        page: joi.number().min(0).max(100).default(0),
+        size: joi.number().min(1).max(750).default(2),
+        search: joi.string(),
+        filterby: joi
+            .string()
+            .valid("cannabis", "non-cannabis", "approved vendor"),
+        sortKey: joi.string().valid("business_id", "dba", "name"),
+        sortOrder: joi.string().valid("ASC", "DESC"),
+    });
+    //schema options
+    const options = {
+        abortEarly: false, //include all errors
+    };
+    //validate request body
+    const { error, value } = schema.validate(req.query, options);
+    if (error) {
         throw new CustomAPIError(`validation error:${error.message}`);
     } else {
         req.body = value;
@@ -298,4 +337,5 @@ module.exports = {
     loginSchema,
     resetSchema,
     cannabisBusiness,
+    querySchemaBusinessList,
 };

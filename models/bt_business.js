@@ -7,10 +7,19 @@ module.exports = (sequelize, DataTypes) => {
         // The `models/index` file will call this method automatically.
         static associate(model) {
             Business.hasMany(model.Stage_Status, { foreignKey: "business_id" });
+            Business.hasMany(model.License, { foreignKey: "business_id" });
+            Business.hasMany(model.UserAssociation, {
+                foreignKey: "business_id",
+            });
+            Business.hasMany(model.Address, { foreignKey: "business_id" });
+            Business.hasMany(model.Phone, { foreignKey: "business_id" });
         }
     }
     Business.init(
         {
+            user_id: {
+                type: DataTypes.BIGINT,
+            },
             business_id: {
                 allowNull: false,
                 autoIncrement: true,

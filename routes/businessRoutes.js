@@ -10,9 +10,20 @@ const {
     getlicenseTypedesignList,
     getAllBusiness,
     registerBusiness,
+    oneBusiness,
 } = require("../controller/businessController");
 const router = express.Router();
 const authenticate = require("../middleware/authenticate");
+router.get(
+    "/getallbusiness",
+    validationMiddleware.querySchemaBusinessList,
+    getAllBusiness
+);
+router.get(
+    "/getonebusiness/:id",
+    validationMiddleware.paramsSchema,
+    oneBusiness
+);
 router.use(authenticate);
 router.get("/getalllicensetype", getlicenseTypedesignList);
 router.get("/getallCountries", getCountryList);
@@ -26,5 +37,4 @@ router.post(
     validationMiddleware.cannabisBusiness,
     registerBusiness
 );
-router.get("/getallbusiness", getAllBusiness);
 module.exports = router;

@@ -18,7 +18,7 @@ const License = db.License;
 const Phone = db.Phone;
 const BadRequestError = require("../errors/badRequestError");
 const { Op } = require("sequelize");
-//const Stage_Status = db.Stage_Status;
+const Stage_Status = db.Stage_Status;
 const paginate = require("../utills/paginate");
 const getCountryList = async (req, res) => {
     const data = await Country.findAll({
@@ -93,6 +93,10 @@ const getuserassociationList = async (req, res) => {
 //register cannabiss business
 const registerBusiness = async (req, res) => {
     const user = await User.findOne({ where: { email: req.user.email } });
+    const status = await Stage_Status.findOne({ where: { user_id: user.id } });
+    if (status) {
+        throw new BadRequestError("business already registred");
+    }
     const state = await Region.findOne({
         where: { bt_region_id: req.body.basic_details.state_of_incorporation },
     });
@@ -108,6 +112,7 @@ const registerBusiness = async (req, res) => {
         is_createdby_stdc: "Y",
         is_cannabis_business: req.body.is_cannabis_business,
         state_id: state.id,
+        user_id: user.id,
     });
     if (req.body.is_cannabis_business === "Y") {
         const license = await LicenseType.findOne({
@@ -174,6 +179,7 @@ const registerBusiness = async (req, res) => {
         zipcodes_id: zipcode.id,
         street_no: req.body.contact_details.legal_address.street_no,
         address1: address1,
+        business_id: basicDetails.business_id,
     };
     const addressDetails = await Address.create(addressdata);
 
@@ -196,7 +202,7 @@ const registerBusiness = async (req, res) => {
     });
     if (
         req.body.contact_details.business_location
-            .isBusinessLocationSameAsLegalAddress === "Y"
+            .is_business_location_sameas_legal_address === "Y"
     ) {
         await Address.update(
             {
@@ -318,12 +324,12 @@ const registerBusiness = async (req, res) => {
             }
         });
     }
-    await db.Stage_Status.create({
+    await Stage_Status.create({
+        user_id: user.id,
         createdBy: user.fullName,
         updatedBy: user.fullName,
-        stage: "Membership",
-        status: "pending",
         business_id: basicDetails.business_id,
+        business_profile: "complete",
     });
 
     res.status(StatusCodes.CREATED).json({
@@ -362,9 +368,12 @@ const getAllBusiness = async (req, res) => {
         ],
 
         where: condition,
+        include: [
+            { model: Stage_Status, attributes: ["membership", "status_id"] },
+        ],
         limit,
         offset,
-        order: [[sortKey || "createdBy", sortOrder || "ASC"]],
+        order: [[sortKey || "business_id", sortOrder || "ASC"]],
         // eslint-disable-next-line no-dupe-keys
         attributes: [
             "business_id",
@@ -380,7 +389,8 @@ const getAllBusiness = async (req, res) => {
     const response = paginate.getPagingData(business, page, limit);
     res.status(StatusCodes.OK).json(response);
 
-    if (filterby === "Cannabis Business") {
+    //filter by cannabis business
+    if (filterby === "cannabis") {
         const business = await Business.findAndCountAll({
             attributes: [
                 "business_id",
@@ -392,42 +402,18 @@ const getAllBusiness = async (req, res) => {
                 "is_cannabis_business",
                 "is_createdby_stdc",
             ],
-            where: condition,
+            where: {
+                [Op.and]: [{ is_cannabis_business: "Y" }, condition],
+            },
+            include: [
+                {
+                    model: db.Stage_Status,
+                    attributes: ["membership", "status_id"],
+                },
+            ],
             limit,
             offset,
-            order: [[sortKey || "createdBy", sortOrder || "ASC"]],
-            // eslint-disable-next-line no-dupe-keys
-            attributes: [
-                "business_id",
-                "name",
-                "dba",
-                "createdAt",
-                "is_approved",
-                "is_approved_vendor",
-                "is_cannabis_business",
-                "is_createdby_stdc",
-            ],
-        });
-        const response = paginate.getPagingData(business, page, limit);
-        res.status(StatusCodes.OK).json(response);
-    }
-    if (filterby === "Non-Cannabis Business") {
-        const business = await Business.findAndCountAll({
-            attributes: [
-                "business_id",
-                "name",
-                "dba",
-                "bp_group_shortcode",
-                "createdAt",
-                "is_approved",
-                "is_approved_vendor",
-                "is_cannabis_business",
-                "is_createdby_stdc",
-            ],
-            where: condition,
-            limit,
-            offset,
-            order: [[sortKey || "createdBy", sortOrder || "ASC"]],
+            order: [[sortKey || "business_id", sortOrder || "ASC"]],
             // eslint-disable-next-line no-dupe-keys
             attributes: [
                 "business_id",
@@ -444,23 +430,71 @@ const getAllBusiness = async (req, res) => {
         res.status(StatusCodes.OK).json(response);
     }
 
-    if (filterby === "Approved Vendor") {
+    //filterby non-cannabis business
+    if (filterby === "non-cannabis") {
         const business = await Business.findAndCountAll({
             attributes: [
                 "business_id",
                 "name",
                 "dba",
-                "bp_group_shortcode",
                 "createdAt",
                 "is_approved",
                 "is_approved_vendor",
                 "is_cannabis_business",
                 "is_createdby_stdc",
             ],
-            where: condition,
+            where: {
+                [Op.and]: [{ is_cannabis_business: "N" }, condition],
+            },
+            include: [
+                {
+                    model: Stage_Status,
+                    attributes: ["membership", "status_id"],
+                },
+            ],
             limit,
             offset,
-            order: [[sortKey || "createdBy", sortOrder || "ASC"]],
+            order: [[sortKey || "business_id", sortOrder || "ASC"]],
+            // eslint-disable-next-line no-dupe-keys
+            attributes: [
+                "business_id",
+                "name",
+                "dba",
+                "createdAt",
+                "is_approved",
+                "is_approved_vendor",
+                "is_cannabis_business",
+                "is_createdby_stdc",
+            ],
+        });
+        const response = paginate.getPagingData(business, page, limit);
+        res.status(StatusCodes.OK).json(response);
+    }
+    //filter by approved vendor
+    if (filterby === "approved vendor") {
+        const business = await Business.findAndCountAll({
+            attributes: [
+                "business_id",
+                "name",
+                "dba",
+                "createdAt",
+                "is_approved",
+                "is_approved_vendor",
+                "is_cannabis_business",
+                "is_createdby_stdc",
+            ],
+            where: {
+                [Op.and]: [{ is_approved_vendor: "Y" }, condition],
+            },
+            include: [
+                {
+                    model: Stage_Status,
+                    attributes: ["membership", "status_id"],
+                },
+            ],
+            limit,
+            offset,
+            order: [[sortKey || "business_id", sortOrder || "ASC"]],
             // eslint-disable-next-line no-dupe-keys
             attributes: [
                 "business_id",
@@ -477,6 +511,61 @@ const getAllBusiness = async (req, res) => {
         res.status(StatusCodes.OK).json(response);
     }
 };
+//get one business details
+const oneBusiness = async (req, res) => {
+    const user = await User.findOne({ where: { id: req.params.id } });
+    const business = await Business.findOne({
+        where: { user_id: user.id },
+        attributes: [
+            "business_id",
+            "name",
+            "dba",
+            "fedtaxid",
+            "createdAt",
+            "is_approved",
+            "is_approved_vendor",
+            "is_cannabis_business",
+            "is_createdby_stdc",
+        ],
+        include: [
+            {
+                model: License,
+                attributes: [
+                    "business_license_id",
+                    "license_type",
+                    "license_no",
+                ],
+            },
+            {
+                model: UserAssociation,
+                attributes: [
+                    "name",
+                    "email",
+                    "business_user_assoc_id",
+                    "description",
+                    "user_assoc_role",
+                    "ownership_percent",
+                ],
+            },
+            {
+                model: Stage_Status,
+                attributes: [
+                    "status_id",
+                    "membership",
+                    "standardc_due_diligence",
+                    "business_kyc_cdd",
+                    "business_profile",
+                ],
+            },
+            {
+                model: Address,
+                attributes: ["address_id", "street_no", "address2"],
+            },
+            { model: Phone, attributes: ["phone", "phone_type_id"] },
+        ],
+    });
+    res.status(StatusCodes.OK).json(business);
+};
 module.exports = {
     getCountryList,
     getZipcodeList,
@@ -489,4 +578,5 @@ module.exports = {
     getuserassociationList,
     registerBusiness,
     getAllBusiness,
+    oneBusiness,
 };

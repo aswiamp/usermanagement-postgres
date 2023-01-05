@@ -13,6 +13,10 @@ module.exports = (sequelize, DataTypes) => {
     }
     Stage_Status.init(
         {
+            user_id: {
+                allowNull: false,
+                type: DataTypes.BIGINT,
+            },
             status_id: {
                 allowNull: false,
                 primaryKey: true,
@@ -30,17 +34,20 @@ module.exports = (sequelize, DataTypes) => {
             updatedBy: {
                 type: DataTypes.STRING,
             },
-            stage: {
-                type: DataTypes.ENUM(
-                    "Membership",
-                    "StandardC Due Diligence",
-                    "Business KYC/CDD",
-                    "Business Profile"
-                ),
-                allowNull: false,
-            },
-            status: {
+            membership: {
                 type: DataTypes.ENUM("pending", "full"),
+                defaultValue: "pending",
+            },
+            standardc_due_diligence: {
+                type: DataTypes.ENUM("pass", "fail"),
+                defaultValue: "fail",
+            },
+            business_kyc_cdd: {
+                type: DataTypes.ENUM("pass", "fail"),
+                defaultValue: "fail",
+            },
+            business_profile: {
+                type: DataTypes.ENUM("complete", "pending"),
                 defaultValue: "pending",
             },
             business_id: {
