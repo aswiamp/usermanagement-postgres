@@ -1,6 +1,7 @@
 const { StatusCodes } = require("http-status-codes");
 const db = require("../models");
 //const address = require("../models/address");
+const CustomAPIError = require("../errors/custom-error");
 const User = db.user;
 const Business = db.Business;
 const Country = db.Country;
@@ -514,6 +515,9 @@ const getAllBusiness = async (req, res) => {
 //get one business details
 const oneBusiness = async (req, res) => {
     const user = await User.findOne({ where: { id: req.params.id } });
+    if (!user) {
+        throw new CustomAPIError("user not found");
+    }
     const business = await Business.findOne({
         where: { user_id: user.id },
         attributes: [

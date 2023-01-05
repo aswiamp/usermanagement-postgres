@@ -321,7 +321,7 @@ const querySchemaBusinessList = (req, res, next) => {
     //validate request body
     const { error, value } = schema.validate(req.query, options);
     if (error) {
-        throw new CustomAPIError(`validation error:${error.message}`);
+        throw new badRequestError(`validation error:${error.message}`);
     } else {
         req.body = value;
         next();
