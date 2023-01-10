@@ -21,7 +21,7 @@ router.get(
 );
 router.get(
     "/getonebusiness/:id",
-    validationMiddleware.paramsSchema,
+    validationMiddleware.getOneParamsSchema,
     oneBusiness
 );
 router.use(authenticate);

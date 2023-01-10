@@ -1,21 +1,21 @@
 const { Model } = require("sequelize");
 
 module.exports = (sequelize, DataTypes) => {
-    class Phone extends Model {
+    class Phones extends Model {
         // Helper method for defining associations.
         // This method is not a part of Sequelize lifecycle.
         // The `models/index` file will call this method automatically.
         static associate(model) {
-            Phone.belongsTo(model.Business, { foreignKey: "business_id" });
+            Phones.belongsTo(model.Business, { foreignKey: "business_id" });
         }
     }
-    Phone.init(
+    Phones.init(
         {
             business_phone_id: {
                 allowNull: false,
                 primaryKey: true,
-                autoIncrement: true,
-                type: DataTypes.BIGINT,
+                type: DataTypes.UUID,
+                defaultValue: DataTypes.UUIDV4,
             },
             is_active: {
                 type: DataTypes.ENUM("Y", "N"),
@@ -33,7 +33,7 @@ module.exports = (sequelize, DataTypes) => {
                 allowNull: false,
             },
             business_id: {
-                type: DataTypes.BIGINT,
+                type: DataTypes.UUID,
             },
             phone_type_id: {
                 type: DataTypes.BIGINT,
@@ -41,11 +41,11 @@ module.exports = (sequelize, DataTypes) => {
         },
         {
             sequelize,
-            modelName: Phone.name,
-            tableName: "phone",
+            modelName: Phones.name,
+            tableName: "phones",
             timestamps: true,
         }
     );
 
-    return Phone;
+    return Phones;
 };

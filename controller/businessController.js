@@ -14,12 +14,12 @@ const InvestorType = db.Investortype;
 const EntityType = db.Entitytype;
 const Address = db.Address;
 const UserAssociationType = db.Userassociation;
-const UserAssociation = db.UserAssociation;
+const User_Association = db.User_Association;
 const License = db.License;
-const Phone = db.Phone;
+const Phones = db.Phones;
 const BadRequestError = require("../errors/badRequestError");
 const { Op } = require("sequelize");
-const Stage_Status = db.Stage_Status;
+const Stage_Statuses = db.Stage_Statuses;
 const paginate = require("../utills/paginate");
 const getCountryList = async (req, res) => {
     const data = await Country.findAll({
@@ -94,7 +94,9 @@ const getuserassociationList = async (req, res) => {
 //register cannabiss business
 const registerBusiness = async (req, res) => {
     const user = await User.findOne({ where: { email: req.user.email } });
-    const status = await Stage_Status.findOne({ where: { user_id: user.id } });
+    const status = await Stage_Statuses.findOne({
+        where: { user_id: user.id },
+    });
     if (status) {
         throw new BadRequestError("business already registred");
     }
@@ -177,6 +179,7 @@ const registerBusiness = async (req, res) => {
         is_active: "Y",
         createdBy: user.fullName,
         updatedBy: user.fullName,
+        zipcode: req.body.contact_details.legal_address.zipcode,
         zipcodes_id: zipcode.id,
         street_no: req.body.contact_details.legal_address.street_no,
         address1: address1,
@@ -193,7 +196,7 @@ const registerBusiness = async (req, res) => {
         throw new BadRequestError("enter a valid id");
     }
 
-    await Phone.create({
+    await Phones.create({
         is_active: "Y",
         createdBy: user.fullName,
         updatedBy: user.fullName,
@@ -243,7 +246,7 @@ const registerBusiness = async (req, res) => {
         where: { name: "Controlling Managers & Operators" },
     });
 
-    await UserAssociation.create({
+    await User_Association.create({
         is_active: "Y",
         createdBy: user.fullName,
         updatedBy: user.fullName,
@@ -253,7 +256,7 @@ const registerBusiness = async (req, res) => {
         user_assoc_id: user_association.id,
         ownership_percent: 0,
         user_assoc_role: "Admin",
-        UserId: user.id,
+        user_id: user.id,
         business_id: basicDetails.business_id,
         is_contact_person: "Y",
     });
@@ -266,7 +269,7 @@ const registerBusiness = async (req, res) => {
                 throw new BadRequestError("enter a valid id");
             }
             if (data.user_type === "7cf77242-181c-45a2-94a5-2728974e8805") {
-                await UserAssociation.create({
+                await User_Association.create({
                     is_active: "Y",
                     createdBy: user.fullName,
                     updatedBy: user.fullName,
@@ -275,7 +278,7 @@ const registerBusiness = async (req, res) => {
                     description: "Beneficial owner",
                     ownership_percent: data.ownership_percentage,
                     user_assoc_role: data.access_type,
-                    UserId: user.id,
+                    user_id: user.id,
                     business_id: basicDetails.business_id,
                     user_assoc_id: user_assoc.id,
                     is_contact_person: data.set_as_contact_person,
@@ -283,7 +286,7 @@ const registerBusiness = async (req, res) => {
             }
 
             if (data.user_type === "ca51143d-9486-478b-a1cd-8051d682b7e0") {
-                await UserAssociation.create({
+                await User_Association.create({
                     is_active: "Y",
                     createdBy: user.fullName,
                     updatedBy: user.fullName,
@@ -292,7 +295,7 @@ const registerBusiness = async (req, res) => {
                     description: "Controlling Managers & Operators",
                     ownership_percent: 0,
                     user_assoc_role: data.access_type,
-                    UserId: user.id,
+                    user_id: user.id,
                     business_id: basicDetails.business_id,
                     user_assoc_id: user_assoc.id,
                     is_contact_person: data.set_as_contact_person,
@@ -307,7 +310,7 @@ const registerBusiness = async (req, res) => {
                 if (!investorType) {
                     throw new BadRequestError("enter a valid id");
                 }
-                await UserAssociation.create({
+                await User_Association.create({
                     is_active: "Y",
                     createdBy: user.fullName,
                     updatedBy: user.fullName,
@@ -316,7 +319,7 @@ const registerBusiness = async (req, res) => {
                     description: "Investor",
                     ownership_percent: 0,
                     user_assoc_role: data.access_type,
-                    UserId: user.id,
+                    user_id: user.id,
                     business_id: basicDetails.business_id,
                     investor_type_id: investorType.id,
                     user_assoc_id: user_assoc.id,
@@ -325,7 +328,7 @@ const registerBusiness = async (req, res) => {
             }
         });
     }
-    await Stage_Status.create({
+    await Stage_Statuses.create({
         user_id: user.id,
         createdBy: user.fullName,
         updatedBy: user.fullName,
@@ -355,40 +358,6 @@ const getAllBusiness = async (req, res) => {
           }
         : null;
     const { limit, offset } = paginate.getPagination(page, size);
-
-    const business = await Business.findAndCountAll({
-        attributes: [
-            "business_id",
-            "name",
-            "dba",
-            "createdAt",
-            "is_approved",
-            "is_approved_vendor",
-            "is_cannabis_business",
-            "is_createdby_stdc",
-        ],
-
-        where: condition,
-        include: [
-            { model: Stage_Status, attributes: ["membership", "status_id"] },
-        ],
-        limit,
-        offset,
-        order: [[sortKey || "business_id", sortOrder || "ASC"]],
-        // eslint-disable-next-line no-dupe-keys
-        attributes: [
-            "business_id",
-            "name",
-            "dba",
-            "createdAt",
-            "is_approved",
-            "is_approved_vendor",
-            "is_cannabis_business",
-            "is_createdby_stdc",
-        ],
-    });
-    const response = paginate.getPagingData(business, page, limit);
-    res.status(StatusCodes.OK).json(response);
 
     //filter by cannabis business
     if (filterby === "cannabis") {
@@ -449,7 +418,7 @@ const getAllBusiness = async (req, res) => {
             },
             include: [
                 {
-                    model: Stage_Status,
+                    model: Stage_Statuses,
                     attributes: ["membership", "status_id"],
                 },
             ],
@@ -489,7 +458,7 @@ const getAllBusiness = async (req, res) => {
             },
             include: [
                 {
-                    model: Stage_Status,
+                    model: Stage_Statuses,
                     attributes: ["membership", "status_id"],
                 },
             ],
@@ -508,6 +477,44 @@ const getAllBusiness = async (req, res) => {
                 "is_createdby_stdc",
             ],
         });
+        const response = paginate.getPagingData(business, page, limit);
+        res.status(StatusCodes.OK).json(response);
+    } else {
+        const business = await Business.findAndCountAll({
+            attributes: [
+                "business_id",
+                "name",
+                "dba",
+                "createdAt",
+                "is_approved",
+                "is_approved_vendor",
+                "is_cannabis_business",
+                "is_createdby_stdc",
+            ],
+
+            where: condition,
+            include: [
+                {
+                    model: Stage_Statuses,
+                    attributes: ["membership", "status_id"],
+                },
+            ],
+            limit,
+            offset,
+            order: [[sortKey || "business_id", sortOrder || "ASC"]],
+            // eslint-disable-next-line no-dupe-keys
+            attributes: [
+                "business_id",
+                "name",
+                "dba",
+                "createdAt",
+                "is_approved",
+                "is_approved_vendor",
+                "is_cannabis_business",
+                "is_createdby_stdc",
+            ],
+        });
+
         const response = paginate.getPagingData(business, page, limit);
         res.status(StatusCodes.OK).json(response);
     }
@@ -533,17 +540,10 @@ const oneBusiness = async (req, res) => {
         ],
         include: [
             {
-                model: License,
-                attributes: [
-                    "business_license_id",
-                    "license_type",
-                    "license_no",
-                ],
-            },
-            {
-                model: UserAssociation,
+                model: User_Association,
                 attributes: [
                     "name",
+                    "user_id",
                     "email",
                     "business_user_assoc_id",
                     "description",
@@ -552,7 +552,7 @@ const oneBusiness = async (req, res) => {
                 ],
             },
             {
-                model: Stage_Status,
+                model: Stage_Statuses,
                 attributes: [
                     "status_id",
                     "membership",
@@ -563,9 +563,17 @@ const oneBusiness = async (req, res) => {
             },
             {
                 model: Address,
-                attributes: ["address_id", "street_no", "address2"],
+                attributes: ["address_id", "street_no", "address2", "zipcode"],
             },
-            { model: Phone, attributes: ["phone", "phone_type_id"] },
+            { model: Phones, attributes: ["phone", "business_phone_id"] },
+            {
+                model: License,
+                attributes: [
+                    "business_license_id",
+                    "license_no",
+                    "license_type",
+                ],
+            },
         ],
     });
     res.status(StatusCodes.OK).json(business);

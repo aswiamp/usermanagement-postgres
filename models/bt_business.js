@@ -1,4 +1,5 @@
-const { Model } = require("sequelize");
+// eslint-disable-next-line no-unused-vars
+const { Model, UUIDV4 } = require("sequelize");
 
 module.exports = (sequelize, DataTypes) => {
     class Business extends Model {
@@ -6,25 +7,27 @@ module.exports = (sequelize, DataTypes) => {
         // This method is not a part of Sequelize lifecycle.
         // The `models/index` file will call this method automatically.
         static associate(model) {
-            Business.hasMany(model.Stage_Status, { foreignKey: "business_id" });
-            Business.hasMany(model.License, { foreignKey: "business_id" });
-            Business.hasMany(model.UserAssociation, {
+            Business.hasMany(model.Stage_Statuses, {
                 foreignKey: "business_id",
             });
-            Business.hasMany(model.Address, { foreignKey: "business_id" });
-            Business.hasMany(model.Phone, { foreignKey: "business_id" });
+            Business.hasOne(model.License, { foreignKey: "business_id" });
+            Business.hasMany(model.User_Association, {
+                foreignKey: "business_id",
+            });
+            Business.hasOne(model.Address, { foreignKey: "business_id" });
+            Business.hasOne(model.Phones, { foreignKey: "business_id" });
         }
     }
     Business.init(
         {
             user_id: {
-                type: DataTypes.BIGINT,
+                type: DataTypes.UUID,
             },
             business_id: {
                 allowNull: false,
-                autoIncrement: true,
                 primaryKey: true,
-                type: DataTypes.BIGINT,
+                type: DataTypes.UUID,
+                defaultValue: DataTypes.UUIDV4,
             },
             isactive: {
                 type: DataTypes.ENUM("Y", "N"),

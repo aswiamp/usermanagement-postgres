@@ -1,27 +1,27 @@
 const { Model } = require("sequelize");
 
 module.exports = (sequelize, DataTypes) => {
-    class Stage_Status extends Model {
+    class Stage_Statuses extends Model {
         // Helper method for defining associations.
         // This method is not a part of Sequelize lifecycle.
         // The `models/index` file will call this method automatically.
         static associate(model) {
-            Stage_Status.belongsTo(model.Business, {
+            Stage_Statuses.belongsTo(model.Business, {
                 foreignKey: "business_id",
             });
         }
     }
-    Stage_Status.init(
+
+    Stage_Statuses.init(
         {
             user_id: {
-                allowNull: false,
-                type: DataTypes.BIGINT,
+                type: DataTypes.UUID,
             },
             status_id: {
                 allowNull: false,
                 primaryKey: true,
-                autoIncrement: true,
-                type: DataTypes.BIGINT,
+                type: DataTypes.UUID,
+                defaultValue: DataTypes.UUIDV4,
             },
             is_active: {
                 type: DataTypes.ENUM("Y", "N"),
@@ -52,15 +52,15 @@ module.exports = (sequelize, DataTypes) => {
             },
             business_id: {
                 allowNull: false,
-                type: DataTypes.BIGINT,
+                type: DataTypes.UUID,
             },
         },
         {
             sequelize,
-            modelName: Stage_Status.name,
+            modelName: Stage_Statuses.name,
             tableName: "bp_onboard_stage_status",
             timestamps: true,
         }
     );
-    return Stage_Status;
+    return Stage_Statuses;
 };

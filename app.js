@@ -12,12 +12,12 @@ const fileUpload = require("express-fileupload");
 const authenticationMiddleWare = require("./middleware/authentication");
 //const { generateAccessToken } = require("./utills/jwt");
 const { generateAdminToken } = require("./utills/jwt");
-const remainder = require("./utills/remainder");
+//const remainder = require("./utills/remainder");
 app.use(fileUpload({ useTempFiles: false }));
 // parse requests of content-type - application/json
 app.use(express.json());
 //report.Report();
-remainder.reminder();
+//remainder.reminder();
 const a = generateAdminToken(
     process.env.USERNAME_ADMIN,
     process.env.PASSWORD_ADMIN

@@ -327,6 +327,24 @@ const querySchemaBusinessList = (req, res, next) => {
         next();
     }
 };
+const getOneParamsSchema = (req, res, next) => {
+    //create schema object
+    const schema = joi.object({
+        id: joi.string().uuid().required().min(1).max(100),
+    });
+    //schema options
+    const options = {
+        abortEarly: false, //include all errors
+    };
+    //validate request body
+    const { error, value } = schema.validate(req.params, options);
+    if (error) {
+        throw new CustomAPIError(`validation error:${error.message}`);
+    } else {
+        req.body = value;
+        next();
+    }
+};
 
 module.exports = {
     userReg,
@@ -338,4 +356,5 @@ module.exports = {
     resetSchema,
     cannabisBusiness,
     querySchemaBusinessList,
+    getOneParamsSchema,
 };

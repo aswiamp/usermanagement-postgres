@@ -1,23 +1,24 @@
-const { Model } = require("sequelize");
+// eslint-disable-next-line no-unused-vars
+const { Model, UUIDV4 } = require("sequelize");
 
 module.exports = (sequelize, DataTypes) => {
-    class UserAssociation extends Model {
+    class User_Association extends Model {
         // Helper method for defining associations.
         // This method is not a part of Sequelize lifecycle.
         // The `models/index` file will call this method automatically.
         static associate(model) {
-            UserAssociation.belongsTo(model.Business, {
+            User_Association.belongsTo(model.Business, {
                 foreignKey: "business_id",
             });
         }
     }
-    UserAssociation.init(
+    User_Association.init(
         {
             business_user_assoc_id: {
                 allowNull: false,
                 primaryKey: true,
-                autoIncrement: true,
-                type: DataTypes.BIGINT,
+                type: DataTypes.UUID,
+                defaultValue: DataTypes.UUIDV4,
             },
             is_active: {
                 type: DataTypes.ENUM("Y", "N"),
@@ -38,13 +39,13 @@ module.exports = (sequelize, DataTypes) => {
                 type: DataTypes.STRING,
                 allowNull: false,
             },
-            UserId: {
+            user_id: {
                 allowNull: false,
-                type: DataTypes.BIGINT,
+                type: DataTypes.UUID,
             },
             business_id: {
                 allowNull: false,
-                type: DataTypes.BIGINT,
+                type: DataTypes.UUID,
             },
             investor_type_id: {
                 type: DataTypes.INTEGER,
@@ -70,11 +71,11 @@ module.exports = (sequelize, DataTypes) => {
         },
         {
             sequelize,
-            modelName: UserAssociation.name,
+            modelName: User_Association.name,
             tableName: "user_association",
             timestamps: true,
         }
     );
 
-    return UserAssociation;
+    return User_Association;
 };
