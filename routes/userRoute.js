@@ -11,7 +11,7 @@ const {
 const { passwordStrengthCheck } = require("../middleware/passwordStrength");
 const validationMiddleware = require("../middleware/joi-validator");
 const limiter = rateLimit({
-    max: 5,
+    max: 25,
     windowMs: 5 * 60 * 1000,
 });
 router.use(limiter);

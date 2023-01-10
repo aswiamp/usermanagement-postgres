@@ -7,6 +7,12 @@ const { sequelize } = require("../models");
 module.exports = {
     async up(queryInterface, Sequelize) {
         await queryInterface.createTable("zipcode", {
+            id: {
+                allowNull: false,
+                autoIncrement: true,
+                primaryKey: true,
+                type: Sequelize.INTEGER,
+            },
             bt_zipcodes_id: {
                 type: Sequelize.STRING,
             },

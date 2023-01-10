@@ -1,4 +1,5 @@
 const CustomAPIError = require("../errors/custom-error");
+const badRequestError = require("../errors/badRequestError");
 const joi = require("joi");
 
 const userReg = (req, res, next) => {
@@ -178,6 +179,173 @@ const resetSchema = (req, res, next) => {
         next();
     }
 };
+
+const cannabisBusiness = (req, res, next) => {
+    //create schema object
+    const schema = joi.object({
+        is_cannabis_business: joi.string().valid("Y", "N").required(),
+        basic_details: {
+            name: joi.string().min(3).max(30).trim().required(),
+            dba: joi.string().min(3).max(30).trim().required(),
+            fedtaxid: joi.number().required(),
+            state_of_incorporation: joi.string().uuid().required(),
+        },
+        cannabis_related_details: joi.when("is_cannabis_business", {
+            is: "Y",
+            then: joi.object({
+                cannabis_business_type: joi.string().uuid().required(),
+                cannabis_license_category: joi.string().uuid().required(),
+                license_number: joi.string().min(3).max(50).required(),
+                cannabis_licensed_country: joi.string().uuid().required(),
+                cannabis_licensed_state: joi.string().uuid().required(),
+            }),
+            otherwise: joi.forbidden(),
+        }),
+        contact_details: {
+            legal_address: {
+                zipcode: joi.string().trim().min(4).required(),
+                street_no: joi.string().max(5).required(),
+                street_name: joi
+                    .string()
+                    .trim()
+                    .min(3)
+                    .max(50)
+                    .trim()
+                    .required(),
+                phone_number: joi.string().trim().max(12).trim().required(),
+                phone_type: joi.string().uuid().required(),
+            },
+            business_location: {
+                is_business_location_sameas_legal_address: joi
+                    .string()
+                    .valid("Y", "N")
+                    .required(),
+                zipcode: joi.when("is_business_location_sameas_legal_address", {
+                    is: "N",
+                    then: joi.string().trim().max(8).required(),
+                    otherwise: joi.forbidden(),
+                }),
+                street_no: joi.when(
+                    "is_business_location_sameas_legal_address",
+                    {
+                        is: "N",
+                        then: joi.string().max(5).required(),
+                        otherwise: joi.forbidden(),
+                    }
+                ),
+                street_name: joi.when(
+                    "is_business_location_sameas_legal_address",
+                    {
+                        is: "N",
+                        then: joi
+                            .string()
+                            .trim()
+                            .min(3)
+                            .max(50)
+                            .trim()
+                            .required(),
+                        otherwise: joi.forbidden(),
+                    }
+                ),
+            },
+        },
+        key_person_registration: {
+            add_user: joi.string().valid("Y", "N").required(),
+            user: joi.when("add_user", {
+                is: "Y",
+                then: joi.array().items(
+                    joi.object({
+                        user_type: joi.string().uuid().required(),
+                        name: joi
+                            .string()
+                            .trim()
+                            .min(3)
+                            .max(50)
+                            .trim()
+                            .required(),
+                        email: joi.string().trim().email().required(),
+                        ownership_percentage: joi.when("user_type", {
+                            is: "7cf77242-181c-45a2-94a5-2728974e8805",
+                            then: joi.number().min(20).max(100).required(),
+                            otherwise: joi.forbidden(),
+                        }),
+                        investor_type: joi.when("user_type", {
+                            is: "f63eda23-26fc-4594-b398-813c82f3e33b",
+                            then: joi.string().uuid().required(),
+                            otherwise: joi.forbidden(),
+                        }),
+                        access_type: joi
+                            .string()
+                            .valid("Admin", "Advanced", "Limited", "No access")
+                            .required(),
+                        set_as_contact_person: joi
+                            .string()
+                            .valid("Y", "N")
+                            .required(),
+                    })
+                ),
+                otherwise: joi.forbidden(),
+            }),
+        },
+    });
+    //schema options
+    const options = {
+        abortEarly: false, //include all errors
+    };
+    //validate request body
+    const { error, value } = schema.validate(req.body, options);
+    if (error) {
+        throw new badRequestError(`validation error:${error.message}`);
+    } else {
+        req.body = value;
+        next();
+    }
+};
+
+const querySchemaBusinessList = (req, res, next) => {
+    //create schema object
+    const schema = joi.object({
+        page: joi.number().min(0).max(100).default(0),
+        size: joi.number().min(1).max(750).default(2),
+        search: joi.string(),
+        filterby: joi
+            .string()
+            .valid("cannabis", "non-cannabis", "approved vendor"),
+        sortKey: joi.string().valid("business_id", "dba", "name"),
+        sortOrder: joi.string().valid("ASC", "DESC"),
+    });
+    //schema options
+    const options = {
+        abortEarly: false, //include all errors
+    };
+    //validate request body
+    const { error, value } = schema.validate(req.query, options);
+    if (error) {
+        throw new badRequestError(`validation error:${error.message}`);
+    } else {
+        req.body = value;
+        next();
+    }
+};
+const getOneParamsSchema = (req, res, next) => {
+    //create schema object
+    const schema = joi.object({
+        id: joi.string().uuid().required().min(1).max(100),
+    });
+    //schema options
+    const options = {
+        abortEarly: false, //include all errors
+    };
+    //validate request body
+    const { error, value } = schema.validate(req.params, options);
+    if (error) {
+        throw new CustomAPIError(`validation error:${error.message}`);
+    } else {
+        req.body = value;
+        next();
+    }
+};
+
 module.exports = {
     userReg,
     inviteSchema,
@@ -186,4 +354,7 @@ module.exports = {
     updateSchema,
     loginSchema,
     resetSchema,
+    cannabisBusiness,
+    querySchemaBusinessList,
+    getOneParamsSchema,
 };

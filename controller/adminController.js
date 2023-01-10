@@ -2,7 +2,7 @@ const jwt = require("../utills/jwt");
 const db = require("../models");
 const User = db.user;
 const Invite = db.invite;
-const Details = db.userdetails;
+const Details = db.user_Details;
 const { StatusCodes } = require("http-status-codes");
 const transporter = require("../utills/sendMail");
 const CustomAPIError = require("../errors/custom-error");
@@ -17,6 +17,7 @@ const sendInvite = async (req, res) => {
     const registerURL = `${req.protocol}://${req.get(
         "host"
     )}/api/v1/user/register/${accessToken}`;
+    // eslint-disable-next-line no-var
     var options = {
         from: '"ADMIN" <admin@gmail.com>',
         to: req.body.email,
@@ -74,6 +75,7 @@ const resendInvite = async (req, res) => {
     const registerURL = `${req.protocol}://${req.get(
         "host"
     )}/api/v1/user/register/${accessToken}`;
+    // eslint-disable-next-line prefer-const
     let options = {
         from: '"ADMIN" <admin@gmail.com>',
         to: invite.email,
@@ -95,6 +97,7 @@ const resendInvite = async (req, res) => {
 const getUserList = async (req, res) => {
     const { page, size, search, sortKey, sortOrder } = req.query;
     //searching
+    // eslint-disable-next-line no-var
     var condition = search
         ? {
               [Op.or]: [
@@ -133,6 +136,7 @@ const getUser = async (req, res) => {
         throw new CustomAPIError("no user with this id");
     }
     if (user.image) {
+        // eslint-disable-next-line no-var
         var image = await bucket.getSignedURL(user.image);
     }
     res.status(StatusCodes.OK).json({

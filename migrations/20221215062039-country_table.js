@@ -7,6 +7,12 @@ const { sequelize } = require("../models");
 module.exports = {
     async up(queryInterface, Sequelize) {
         await queryInterface.createTable("country", {
+            id: {
+                allowNull: false,
+                autoIncrement: true,
+                primaryKey: true,
+                type: Sequelize.INTEGER,
+            },
             bt_country_id: {
                 type: Sequelize.STRING,
             },

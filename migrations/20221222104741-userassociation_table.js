@@ -6,14 +6,14 @@ const { sequelize } = require("../models");
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
     async up(queryInterface, Sequelize) {
-        await queryInterface.createTable("phonetype", {
+        await queryInterface.createTable("userassociation", {
             id: {
                 allowNull: false,
                 autoIncrement: true,
                 primaryKey: true,
                 type: Sequelize.INTEGER,
             },
-            bt_phone_type_id: {
+            bp_user_association_id: {
                 type: Sequelize.STRING,
             },
             isactive: {
@@ -53,6 +53,6 @@ module.exports = {
 
     // eslint-disable-next-line no-unused-vars
     async down(queryInterface, Sequelize) {
-        await queryInterface.dropTable("phonetype");
+        await queryInterface.dropTable("userassociation");
     },
 };
