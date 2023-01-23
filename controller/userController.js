@@ -186,7 +186,7 @@ const login = async (req, res) => {
     }
     //succesfull login
     await client.del(email);
-    const accessToken = jwt.generateAccessToken(req.body.email);
+    const accessToken = jwt.generateAccessToken(req.body.email, user.id);
     //reset url
     const resetlink = `${req.protocol}://${req.get(
         "host"

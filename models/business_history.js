@@ -1,61 +1,53 @@
-// eslint-disable-next-line no-unused-vars
-const { Model, UUIDV4 } = require("sequelize");
+const { Model } = require("sequelize");
 
 module.exports = (sequelize, DataTypes) => {
-    class Address extends Model {
+    class business_history extends Model {
         // Helper method for defining associations.
         // This method is not a part of Sequelize lifecycle.
         // The `models/index` file will call this method automatically.
         static associate(model) {
-            Address.belongsTo(model.Business, {
+            business_history.belongsTo(model.user, { foreignKey: "user_id" });
+            business_history.belongsTo(model.Business, {
                 foreignKey: "business_id",
             });
         }
     }
-
-    Address.init(
+    business_history.init(
         {
-            address_id: {
+            user_activity_id: {
                 allowNull: false,
                 primaryKey: true,
                 type: DataTypes.UUID,
                 defaultValue: DataTypes.UUIDV4,
             },
-            business_id: {
-                type: DataTypes.UUID,
+            description: {
+                type: DataTypes.STRING,
+                allowNull: false,
             },
             is_active: {
                 type: DataTypes.ENUM("Y", "N"),
-                defaultValue: "Y",
+                allowNull: false,
             },
             createdBy: {
                 type: DataTypes.STRING,
-                allowNull: false,
             },
             updatedBy: {
                 type: DataTypes.STRING,
             },
-            address1: {
-                type: DataTypes.STRING,
-                allowNull: false,
+            user_id: {
+                type: DataTypes.UUID,
             },
-            zipcodes_id: {
-                type: DataTypes.BIGINT,
-            },
-            zipcode: {
-                type: DataTypes.STRING,
-            },
-            street_no: {
-                type: DataTypes.STRING,
+            business_id: {
+                type: DataTypes.UUID,
             },
         },
         {
             sequelize,
-            modelName: Address.name,
-            tableName: "address",
+            modelName: business_history.name,
+            tableName: "User History",
             timestamps: true,
         }
     );
 
-    return Address;
+    return business_history;
 };

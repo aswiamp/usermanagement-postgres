@@ -3,6 +3,9 @@ const db = require("../models");
 //const address = require("../models/address");
 const CustomAPIError = require("../errors/custom-error");
 const User = db.user;
+const User_preferences = db.user_prefrences;
+const business_history = db.business_history;
+//const client = require("../utills/redis");
 const Business = db.Business;
 const Country = db.Country;
 const Zipcode = db.Zipcode;
@@ -10,6 +13,7 @@ const PhoneType = db.Phonetype;
 const LicenseType = db.Licensetype;
 const LicenseTypedesign = db.Licensetypedesign;
 const Region = db.Region;
+const Business_address = db.Business_address;
 const InvestorType = db.Investortype;
 const EntityType = db.Entitytype;
 const Address = db.Address;
@@ -21,6 +25,9 @@ const BadRequestError = require("../errors/badRequestError");
 const { Op } = require("sequelize");
 const Stage_Statuses = db.Stage_Statuses;
 const paginate = require("../utills/paginate");
+const UnauthorizedError = require("../errors/unauthorized");
+// eslint-disable-next-line no-unused-vars
+const address = require("../models/address");
 const getCountryList = async (req, res) => {
     const data = await Country.findAll({
         attributes: ["bt_country_id", "name", "short_name"],
@@ -94,17 +101,19 @@ const getuserassociationList = async (req, res) => {
 //register cannabiss business
 const registerBusiness = async (req, res) => {
     const user = await User.findOne({ where: { email: req.user.email } });
-    const status = await Stage_Statuses.findOne({
-        where: { user_id: user.id },
-    });
-    if (status) {
-        throw new BadRequestError("business already registred");
-    }
+
     const state = await Region.findOne({
         where: { bt_region_id: req.body.basic_details.state_of_incorporation },
     });
     if (!state) {
         throw new BadRequestError("enter a valid id");
+    }
+    //checking business already registred
+    const name = await Business.findOne({
+        where: { name: req.body.basic_details.name },
+    });
+    if (name) {
+        throw new BadRequestError("business already registred");
     }
     const basicDetails = await Business.create({
         name: req.body.basic_details.name,
@@ -184,6 +193,7 @@ const registerBusiness = async (req, res) => {
         street_no: req.body.contact_details.legal_address.street_no,
         address1: address1,
         business_id: basicDetails.business_id,
+        street_name: req.body.contact_details.legal_address.street_name,
     };
     const addressDetails = await Address.create(addressdata);
 
@@ -208,14 +218,17 @@ const registerBusiness = async (req, res) => {
         req.body.contact_details.business_location
             .is_business_location_sameas_legal_address === "Y"
     ) {
-        await Address.update(
-            {
-                address2: addressDetails.address1,
-            },
-            {
-                where: { address_id: addressDetails.address_id },
-            }
-        );
+        await Business_address.create({
+            address2: addressDetails.address1,
+            is_active: "Y",
+            createdBy: user.fullName,
+            updatedBy: user.fullName,
+            zipcode: addressDetails.zipcode,
+            zipcodes_id: addressDetails.id,
+            street_no: addressDetails.street_no,
+            business_id: basicDetails.business_id,
+            street_name: addressDetails.street_name,
+        });
     } else {
         const zipcodeData = await Zipcode.findOne({
             where: {
@@ -231,14 +244,17 @@ const registerBusiness = async (req, res) => {
             req.body.contact_details.business_location.street_name
         },${await zipcodeData.city},${await zipcodeData.county},${await zipcodeData.zipcode}`;
 
-        await Address.update(
-            {
-                address2: address_,
-            },
-            {
-                where: { address_id: addressDetails.address_id },
-            }
-        );
+        await Business_address.create({
+            address2: address_,
+            is_active: "Y",
+            createdBy: user.fullName,
+            updatedBy: user.fullName,
+            zipcode: req.body.contact_details.business_location.zipcode,
+            zipcodes_id: zipcode.id,
+            street_no: req.body.contact_details.business_location.street_no,
+            business_id: basicDetails.business_id,
+            street_name: req.body.contact_details.business_location.street_name,
+        });
     }
 
     //keyregistration
@@ -335,6 +351,14 @@ const registerBusiness = async (req, res) => {
         business_id: basicDetails.business_id,
         business_profile: "complete",
     });
+    await business_history.create({
+        is_active: "Y",
+        createdBy: user.id,
+        updatedBy: user.id,
+        user_id: user.id,
+        business_id: basicDetails.business_id,
+        description: "Business registered successfully",
+    });
 
     res.status(StatusCodes.CREATED).json({
         id: basicDetails.business_id,
@@ -358,9 +382,26 @@ const getAllBusiness = async (req, res) => {
           }
         : null;
     const { limit, offset } = paginate.getPagination(page, size);
+    await User_preferences.create({
+        sortKey: sortKey || "ASC",
+        sortOrder: sortOrder || "business_id",
+        filterby: filterby || "all",
+        updatedBy: req.user.id,
+        createdBy: req.user.id,
+        user_id: req.user.id,
+    });
+    const user_preferences = await User_preferences.findAll({
+        where: { user_id: req.user.id },
+        order: [["createdAt", "DESC"]],
+    });
+    //
+    const sort_key = user_preferences.map((value) => value.sortKey);
+    const sort_order = user_preferences.map((value) => value.sortOrder);
+    const filter_by = user_preferences.map((value) => value.filterby);
+    console.log(filter_by[0], sort_order[0], sort_key[0]);
 
     //filter by cannabis business
-    if (filterby === "cannabis") {
+    if (filter_by[0] === "cannabis") {
         const business = await Business.findAndCountAll({
             attributes: [
                 "business_id",
@@ -375,15 +416,15 @@ const getAllBusiness = async (req, res) => {
             where: {
                 [Op.and]: [{ is_cannabis_business: "Y" }, condition],
             },
-            include: [
-                {
-                    model: db.Stage_Status,
-                    attributes: ["membership", "status_id"],
-                },
-            ],
+            // include: [
+            //     {
+            //         model: db.Stage_Status,
+            //         attributes: ["membership", "status_id"],
+            //     },
+            // ],
             limit,
             offset,
-            order: [[sortKey || "business_id", sortOrder || "ASC"]],
+            order: [[sort_key[0], sort_order[0]]],
             // eslint-disable-next-line no-dupe-keys
             attributes: [
                 "business_id",
@@ -396,12 +437,18 @@ const getAllBusiness = async (req, res) => {
                 "is_createdby_stdc",
             ],
         });
-        const response = paginate.getPagingData(business, page, limit);
+        const response = paginate.getPagingData(
+            business,
+            page,
+            limit,
+            sortOrder,
+            filterby
+        );
         res.status(StatusCodes.OK).json(response);
     }
 
     //filterby non-cannabis business
-    if (filterby === "non-cannabis") {
+    else if (filter_by[0] === "non-cannabis") {
         const business = await Business.findAndCountAll({
             attributes: [
                 "business_id",
@@ -416,15 +463,15 @@ const getAllBusiness = async (req, res) => {
             where: {
                 [Op.and]: [{ is_cannabis_business: "N" }, condition],
             },
-            include: [
-                {
-                    model: Stage_Statuses,
-                    attributes: ["membership", "status_id"],
-                },
-            ],
+            // include: [
+            //     {
+            //         model: Stage_Statuses,
+            //         attributes: ["membership", "status_id"],
+            //     },
+            // ],
             limit,
             offset,
-            order: [[sortKey || "business_id", sortOrder || "ASC"]],
+            order: [[sort_key[0], sort_order[0]]],
             // eslint-disable-next-line no-dupe-keys
             attributes: [
                 "business_id",
@@ -437,11 +484,17 @@ const getAllBusiness = async (req, res) => {
                 "is_createdby_stdc",
             ],
         });
-        const response = paginate.getPagingData(business, page, limit);
+        const response = paginate.getPagingData(
+            business,
+            page,
+            limit,
+            sortOrder,
+            filterby
+        );
         res.status(StatusCodes.OK).json(response);
     }
     //filter by approved vendor
-    if (filterby === "approved vendor") {
+    else if (filter_by[0] === "approved vendor") {
         const business = await Business.findAndCountAll({
             attributes: [
                 "business_id",
@@ -464,7 +517,7 @@ const getAllBusiness = async (req, res) => {
             ],
             limit,
             offset,
-            order: [[sortKey || "business_id", sortOrder || "ASC"]],
+            order: [[sort_key[0], sort_order[0]]],
             // eslint-disable-next-line no-dupe-keys
             attributes: [
                 "business_id",
@@ -477,6 +530,7 @@ const getAllBusiness = async (req, res) => {
                 "is_createdby_stdc",
             ],
         });
+        // eslint-disable-next-line no-undef
         const response = paginate.getPagingData(business, page, limit);
         res.status(StatusCodes.OK).json(response);
     } else {
@@ -493,15 +547,12 @@ const getAllBusiness = async (req, res) => {
             ],
 
             where: condition,
-            include: [
-                {
-                    model: Stage_Statuses,
-                    attributes: ["membership", "status_id"],
-                },
-            ],
+            // include: [
+            //     { model: Stage_Statuses, attributes: ["membership", "status_id"] },
+            // ],
             limit,
             offset,
-            order: [[sortKey || "business_id", sortOrder || "ASC"]],
+            order: [[sort_key[0] || "name", sort_order[0] || "ASC"]],
             // eslint-disable-next-line no-dupe-keys
             attributes: [
                 "business_id",
@@ -516,6 +567,7 @@ const getAllBusiness = async (req, res) => {
         });
 
         const response = paginate.getPagingData(business, page, limit);
+
         res.status(StatusCodes.OK).json(response);
     }
 };
@@ -578,6 +630,532 @@ const oneBusiness = async (req, res) => {
     });
     res.status(StatusCodes.OK).json(business);
 };
+//view and edit business
+const viewBusiness = async (req, res) => {
+    const { page, size } = req.query;
+
+    const { limit, offset } = paginate.getPagination(page, size);
+    const user = await User.findOne({ where: { email: req.user.email } });
+    const list = await Business.findAndCountAll({
+        where: { user_id: user.id },
+        attributes: [
+            "business_id",
+            "name",
+            "dba",
+            "isactive",
+            "is_cannabis_business",
+        ],
+        limit,
+        offset,
+    });
+
+    // eslint-disable-next-line no-undef
+    const response = paginate.getPagingData(list, page, limit);
+    res.status(StatusCodes.OK).json(response);
+};
+
+//edit viewable business
+
+const editBusiness = async (req, res) => {
+    const user = await User.findOne({ where: { email: req.user.email } });
+    const business = await Business.findOne({
+        where: { business_id: req.params.id },
+    });
+    const role = await User_Association.findOne({
+        where: { user_id: user.id },
+    });
+
+    //checking wheather the user is admin or not
+    if (role.user_assoc_role !== "Admin") {
+        throw new UnauthorizedError("cannot access to perform this action");
+    }
+
+    //edit basic details
+    if (req.body.basic_details) {
+        // eslint-disable-next-line no-unused-vars
+        const basicDetails = await Business.update(
+            {
+                name: req.body.basic_details.name,
+                dba: req.body.basic_details.dba,
+                fedtaxid: req.body.basic_details.fedtaxid,
+                updatedby: user.id,
+            },
+            { where: { business_id: req.params.id } }
+        );
+
+        //edit state
+        if (req.body.basic_details.state) {
+            const state = await Region.findOne({
+                where: {
+                    bt_region_id: req.body.basic_details.state_of_incorporation,
+                },
+            });
+            if (!state) {
+                throw new BadRequestError("enter a valid id");
+            }
+            await Business.update(
+                { state_id: state.id },
+                { where: { business_id: req.params.id } }
+            );
+        }
+        await business_history.create({
+            is_active: "Y",
+            createdBy: user.id,
+            updatedBy: user.id,
+            user_id: user.id,
+            business_id: business.business_id,
+            description: "Basic details updated",
+        });
+    }
+    //edit cannabis reated details
+    if (business.is_cannabis_business === "Y") {
+        if (req.body.cannabis_related_details) {
+            await License.update(
+                {
+                    updatedBy: user.id,
+                    license_no:
+                        req.body.cannabis_related_details.license_number,
+                },
+                { where: { business_id: req.params.id } }
+            );
+            //edit cannabis business type
+            if (req.body.cannabis_related_details.cannabis_business_type) {
+                const license = await LicenseType.findOne({
+                    where: {
+                        bp_license_type_id:
+                            req.body.cannabis_related_details
+                                .cannabis_business_type,
+                    },
+                });
+                if (!license) {
+                    throw new BadRequestError("enter a valid id");
+                }
+                await License.update(
+                    { license_type_id: license.id, license_type: license.name },
+                    { where: { business_id: req.params.id } }
+                );
+            }
+            if (req.body.cannabis_related_details.cannabis_license_category) {
+                const licenseType = await LicenseTypedesign.findOne({
+                    where: {
+                        bp_license_type_desig_id:
+                            req.body.cannabis_related_details
+                                .cannabis_license_category,
+                    },
+                });
+                if (!licenseType) {
+                    throw new BadRequestError("enter a valid id");
+                }
+                await License.update(
+                    { cannabis_license_id: licenseType.id },
+                    { where: { business_id: req.params.id } }
+                );
+            }
+            if (req.body.cannabis_related_details.cannabis_licensed_country) {
+                const country = await Country.findOne({
+                    where: {
+                        bt_country_id:
+                            req.body.cannabis_related_details
+                                .cannabis_licensed_country,
+                    },
+                });
+                if (!country) {
+                    throw new BadRequestError("enter a valid id");
+                }
+                await License.update(
+                    { country_id: country.id },
+                    { where: { business_id: req.params.id } }
+                );
+            }
+            if (req.body.cannabis_related_details.cannabis_licensed_state) {
+                const license_state = await Region.findOne({
+                    where: {
+                        bt_region_id:
+                            req.body.cannabis_related_details
+                                .cannabis_licensed_state,
+                    },
+                });
+                if (!license_state) {
+                    throw new BadRequestError("enter a valid id");
+                }
+                await License.update(
+                    { license_state_region_id: license_state.id },
+                    { where: { business_id: req.params.id } }
+                );
+            }
+            await business_history.create({
+                is_active: "Y",
+                createdBy: user.id,
+                updatedBy: user.id,
+                user_id: user.id,
+                business_id: business.business_id,
+                description: "Cannabis details updated",
+            });
+        }
+    }
+    //edit contact details
+    if (req.body.contact_details) {
+        if (req.body.contact_details.legal_address) {
+            if (req.body.contact_details.legal_address.zipcode) {
+                const zipcode = await Zipcode.findOne({
+                    where: {
+                        zipcode: req.body.contact_details.legal_address.zipcode,
+                    },
+                });
+                if (!zipcode) {
+                    throw new BadRequestError("enter a valid zipcode");
+                }
+                const address = await Business_address.findOne({
+                    where: { business_id: business.business_id },
+                });
+                // eslint-disable-next-line no-var
+                var new_business = await Business.findOne({
+                    where: { business_id: req.params.id },
+                });
+                const address1 = `${new_business.name},${address.street_no} ${address.street_name},${zipcode.city},${zipcode.county},${zipcode.zipcode}`;
+                await Address.update(
+                    {
+                        updatedBy: user.id,
+                        zipcode: req.body.contact_details.legal_address.zipcode,
+                        zipcodes_id: zipcode.id,
+                        address1: address1,
+                    },
+                    { where: { business_id: req.params.id } }
+                );
+            }
+            if (req.body.contact_details.legal_address.streetname) {
+                const address = await Business_address.findOne({
+                    where: { business_id: business.business_id },
+                });
+                const address1 = `${new_business.name},${address.street_no} ${req.body.contact_details.legal_address.street_name},${address.city},${address.county},${address.zipcode}`;
+                await Address.update(
+                    {
+                        updatedBy: user.id,
+                        street_name:
+                            req.body.contact_details.legal_address.street_name,
+                        address1: address1,
+                    },
+                    { where: { business_id: req.params.id } }
+                );
+            }
+            if (req.body.contact_details.legal_address.street_no) {
+                const address = await Address.findOne({
+                    where: { business_id: business.business_id },
+                });
+                const address1 = `${new_business.name},${req.body.contact_details.legal_address.street_no} ${address.street_name},${address.city},${address.county},${address.zipcode}`;
+                await Address.update(
+                    {
+                        updatedBy: user.id,
+                        street_no:
+                            req.body.contact_details.legal_address.street_no,
+                        address1: address1,
+                    },
+                    { where: { business_id: req.params.id } }
+                );
+            }
+            if (req.body.contact_details.legal_address.phone_type) {
+                const phone_type = await PhoneType.findOne({
+                    where: {
+                        bt_phone_type_id:
+                            req.body.contact_details.legal_address.phone_type,
+                    },
+                });
+                if (!phone_type) {
+                    throw new BadRequestError("enter a valid id");
+                }
+                await Phones.update(
+                    {
+                        updatedBy: user.id,
+                        phone: req.body.contact_details.legal_address
+                            .phone_number,
+                        phone_type_id: phone_type.id,
+                    },
+                    { where: { business_id: req.params.id } }
+                );
+            }
+            await business_history.create({
+                is_active: "Y",
+                createdBy: user.id,
+                updatedBy: user.id,
+                user_id: user.id,
+                business_id: business.business_id,
+                description: "Legal Address details updated",
+            });
+        }
+        if (req.body.contact_details.business_location) {
+            if (
+                req.body.contact_details.business_location
+                    .is_business_location_sameas_legal_address === "N"
+            ) {
+                const zipcodeData = await Zipcode.findOne({
+                    where: {
+                        zipcode:
+                            req.body.contact_details.business_location.zipcode,
+                    },
+                });
+                if (!zipcodeData) {
+                    throw new BadRequestError("enter a valid id");
+                }
+                await Business_address.update(
+                    {
+                        updatedBy: user.id,
+                        zipcode:
+                            req.body.contact_details.business_location.zipcode,
+                        zipcodes_id: zipcodeData.id,
+                        streetname:
+                            req.body.contact_details.business_location
+                                .street_name,
+                        street_no:
+                            req.body.contact_details.business_location
+                                .street_no,
+                    },
+                    {
+                        where: { business_id: business.business_id },
+                    }
+                );
+                const address = await Business_address.findOne({
+                    where: { business_id: business.business_id },
+                });
+                const address_ = `${new_business.name},${
+                    req.body.contact_details.business_location.street_no
+                } ${
+                    req.body.contact_details.business_location.street_name
+                },${await address.city},${await address.county},${await address.zipcode}`;
+                await Business_address.update(
+                    {
+                        address2: address_,
+                    },
+                    {
+                        where: { business_id: business.business_id },
+                    }
+                );
+            } else {
+                const address = await Address.findOne({
+                    where: {
+                        business_id: business.business_id,
+                    },
+                });
+                await Business_address.update(
+                    {
+                        address2: address.address1,
+                        updatedBy: user.id,
+                        zipcode: address.zipcode,
+                        zipcodes_id: address.id,
+                        streetname: address.street_name,
+                        street_no: address.street_no,
+                    },
+                    {
+                        where: { business_id: business.business_id },
+                    }
+                );
+            }
+            await business_history.create({
+                is_active: "Y",
+                createdBy: user.id,
+                updatedBy: user.id,
+                user_id: user.id,
+                business_id: business.business_id,
+                description: "Business  details updated",
+            });
+        }
+    }
+    res.status(StatusCodes.OK).json({
+        message: "business details updated",
+    });
+};
+// keyperson details add,edit,delete
+const adduser = async (req, res) => {
+    const user = await User.findOne({ where: { email: req.user.email } });
+    const business = await Business.findOne({
+        where: { business_id: req.params.id },
+    });
+    //const role = await User_Association.findOne({where : {user_id :user.id }});
+    if (req.body.key_person_registration) {
+        if (req.body.key_person_registration.add_user === "Y") {
+            req.body.key_person_registration.user.map(async (data) => {
+                const user_assoc = await UserAssociationType.findOne({
+                    where: { bp_user_association_id: data.user_type },
+                });
+                if (!user_assoc) {
+                    throw new BadRequestError("enter a valid id");
+                }
+                if (data.user_type === "7cf77242-181c-45a2-94a5-2728974e8805") {
+                    await User_Association.create({
+                        is_active: "Y",
+                        createdBy: user.id,
+                        updatedBy: user.id,
+                        name: data.name,
+                        email: data.email,
+                        description: "Beneficial owner",
+                        ownership_percent: data.ownership_percentage,
+                        user_assoc_role: data.access_type,
+                        user_id: user.id,
+                        business_id: business.business_id,
+                        user_assoc_id: user_assoc.id,
+                        is_contact_person: data.set_as_contact_person,
+                    });
+                }
+
+                if (data.user_type === "ca51143d-9486-478b-a1cd-8051d682b7e0") {
+                    await User_Association.create({
+                        is_active: "Y",
+                        createdBy: user.id,
+                        updatedBy: user.id,
+                        name: data.name,
+                        email: data.email,
+                        description: "Controlling Managers & Operators",
+                        ownership_percent: 0,
+                        user_assoc_role: data.access_type,
+                        user_id: user.id,
+                        business_id: business.business_id,
+                        user_assoc_id: user_assoc.id,
+                        is_contact_person: data.set_as_contact_person,
+                    });
+                }
+
+                if (data.user_type === "f63eda23-26fc-4594-b398-813c82f3e33b") {
+                    // eslint-disable-next-line no-unused-vars
+                    const investorType = await InvestorType.findOne({
+                        where: { bp_investor_type_id: data.investor_type },
+                    });
+                    if (!investorType) {
+                        throw new BadRequestError("enter a valid id");
+                    }
+                    await User_Association.create({
+                        is_active: "Y",
+                        createdBy: user.id,
+                        updatedBy: user.id,
+                        name: data.name,
+                        email: data.email,
+                        description: "Investor",
+                        ownership_percent: 0,
+                        user_assoc_role: data.access_type,
+                        user_id: user.id,
+                        business_id: business.business_id,
+                        investor_type_id: investorType.id,
+                        user_assoc_id: user_assoc.id,
+                        is_contact_person: data.set_as_contact_person,
+                    });
+                }
+            });
+        }
+        await business_history.create({
+            is_active: "Y",
+            createdBy: user.id,
+            updatedBy: user.id,
+            user_id: user.id,
+            business_id: business.business_id,
+            description: "User added",
+        });
+    }
+    res.status(StatusCodes.OK).json({
+        message: "user added successfuly",
+    });
+};
+//edit user details
+const edituser = async (req, res) => {
+    const user = await User.findOne({ where: { email: req.user.email } });
+    const business = await Business.findOne({
+        where: { business_id: req.params.id },
+    });
+    const role = await User_Association.findOne({
+        where: { user_id: user.id },
+    });
+
+    //checking wheather the user is admin or not
+    if (role.user_assoc_role !== "Admin") {
+        throw new UnauthorizedError("cannot access to perform this action");
+    }
+    if (req.body.key_person_registration.edit_users) {
+        req.body.key_person_registration.edit_users.map(async (data) => {
+            const user_assoc = await UserAssociationType.findOne({
+                where: { bp_user_association_id: data.user_type },
+            });
+            if (!user_assoc) {
+                throw new BadRequestError("enter a valid id");
+            }
+            if (data.user_type === "7cf77242-181c-45a2-94a5-2728974e8805") {
+                await User_Association.update(
+                    {
+                        updatedBy: user.id,
+                        name: data.name,
+                        email: data.email,
+                        description: "Beneficial owner",
+                        ownership_percent: data.ownership_percentage,
+                        user_assoc_role: data.access_type,
+                        is_contact_person: data.set_as_contact_person,
+                    },
+                    { where: { business_user_assoc_id: data.id } }
+                );
+            }
+
+            if (data.user_type === "ca51143d-9486-478b-a1cd-8051d682b7e0") {
+                await User_Association.update(
+                    {
+                        updatedBy: user.id,
+                        name: data.name,
+                        email: data.email,
+                        description: "Controlling Managers & Operators",
+                        ownership_percent: 0,
+                        user_assoc_role: data.access_type,
+                        is_contact_person: data.set_as_contact_person,
+                    },
+                    { where: { business_user_assoc_id: data.id } }
+                );
+            }
+
+            if (data.user_type === "f63eda23-26fc-4594-b398-813c82f3e33b") {
+                // eslint-disable-next-line no-unused-vars
+                const investorType = await InvestorType.findOne({
+                    where: { bp_investor_type_id: data.investor_type },
+                });
+                if (!investorType) {
+                    throw new BadRequestError("enter a valid id");
+                }
+                await User_Association.update(
+                    {
+                        updatedBy: user.id,
+                        name: data.name,
+                        email: data.email,
+                        description: "Investor",
+                        ownership_percent: 0,
+                        user_assoc_role: data.access_type,
+                        is_contact_person: data.set_as_contact_person,
+                    },
+                    { where: { business_user_assoc_id: data.id } }
+                );
+            }
+            await business_history.create({
+                is_active: "Y",
+                createdBy: user.id,
+                updatedBy: user.id,
+                user_id: user.id,
+                business_id: business.business_id,
+                description: "User details updated",
+            });
+        });
+    }
+    res.status(StatusCodes.OK).json({
+        message: "user details updated successfuly",
+    });
+};
+const deleteUser = async (req, res) => {
+    await User_Association.destroy({
+        where: { business_user_assoc_id: req.body.id },
+    });
+    await business_history.create({
+        is_active: "Y",
+        createdBy: req.user.id,
+        updatedBy: req.user.id,
+        user_id: req.user.id,
+        business_id: req.params.id,
+        description: "User details deleted",
+    }),
+        res.status(StatusCodes.OK).json({
+            message: "deleted successfuly",
+        });
+};
+
 module.exports = {
     getCountryList,
     getZipcodeList,
@@ -591,4 +1169,9 @@ module.exports = {
     registerBusiness,
     getAllBusiness,
     oneBusiness,
+    viewBusiness,
+    editBusiness,
+    adduser,
+    edituser,
+    deleteUser,
 };

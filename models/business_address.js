@@ -2,20 +2,20 @@
 const { Model, UUIDV4 } = require("sequelize");
 
 module.exports = (sequelize, DataTypes) => {
-    class Address extends Model {
+    class Business_address extends Model {
         // Helper method for defining associations.
         // This method is not a part of Sequelize lifecycle.
         // The `models/index` file will call this method automatically.
-        static associate(model) {
-            Address.belongsTo(model.Business, {
-                foreignKey: "business_id",
-            });
+        static associate() {
+            // Address.belongsTo(model.Business, {
+            //     foreignKey: "business_id",
+            // });
         }
     }
 
-    Address.init(
+    Business_address.init(
         {
-            address_id: {
+            business_address_id: {
                 allowNull: false,
                 primaryKey: true,
                 type: DataTypes.UUID,
@@ -35,9 +35,8 @@ module.exports = (sequelize, DataTypes) => {
             updatedBy: {
                 type: DataTypes.STRING,
             },
-            address1: {
+            address2: {
                 type: DataTypes.STRING,
-                allowNull: false,
             },
             zipcodes_id: {
                 type: DataTypes.BIGINT,
@@ -48,14 +47,17 @@ module.exports = (sequelize, DataTypes) => {
             street_no: {
                 type: DataTypes.STRING,
             },
+            street_name: {
+                type: DataTypes.STRING,
+            },
         },
         {
             sequelize,
-            modelName: Address.name,
-            tableName: "address",
+            modelName: Business_address.name,
+            tableName: "business_address",
             timestamps: true,
         }
     );
 
-    return Address;
+    return Business_address;
 };
