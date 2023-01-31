@@ -6,9 +6,7 @@ module.exports = (sequelize, DataTypes) => {
         // Helper method for defining associations.
         // This method is not a part of Sequelize lifecycle.
         // The `models/index` file will call this method automatically.
-        static associate() {
-            // user_password.belongsTo(model.user, { foreignKey: "userId" });
-        }
+        static associate() {}
     }
 
     user_prefrences.init(
@@ -19,6 +17,9 @@ module.exports = (sequelize, DataTypes) => {
                 type: DataTypes.UUID,
                 defaultValue: DataTypes.UUIDV4,
             },
+            pref_name: {
+                type: DataTypes.STRING,
+            },
             sortKey: {
                 type: DataTypes.STRING,
             },
@@ -28,9 +29,6 @@ module.exports = (sequelize, DataTypes) => {
             filterby: {
                 type: DataTypes.STRING,
             },
-            pref_key: {
-                type: DataTypes.STRING,
-            },
             updatedBy: {
                 type: DataTypes.STRING,
                 allowNull: false,
@@ -38,9 +36,6 @@ module.exports = (sequelize, DataTypes) => {
             createdBy: {
                 type: DataTypes.STRING,
                 allowNull: false,
-            },
-            user_id: {
-                type: DataTypes.UUID,
             },
         },
         {

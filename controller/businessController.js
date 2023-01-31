@@ -1,7 +1,9 @@
 const { StatusCodes } = require("http-status-codes");
 const db = require("../models");
 //const address = require("../models/address");
+const moment = require("moment");
 const CustomAPIError = require("../errors/custom-error");
+const path = require("path");
 const User = db.user;
 const User_preferences = db.user_prefrences;
 const business_history = db.business_history;
@@ -22,12 +24,15 @@ const User_Association = db.User_Association;
 const License = db.License;
 const Phones = db.Phones;
 const BadRequestError = require("../errors/badRequestError");
+const { Sequelize } = require("sequelize");
 const { Op } = require("sequelize");
 const Stage_Statuses = db.Stage_Statuses;
 const paginate = require("../utills/paginate");
 const UnauthorizedError = require("../errors/unauthorized");
 // eslint-disable-next-line no-unused-vars
 const address = require("../models/address");
+const { csvDownload } = require("../utills/csv");
+const { pdfExport } = require("../utills/pdf");
 const getCountryList = async (req, res) => {
     const data = await Country.findAll({
         attributes: ["bt_country_id", "name", "short_name"],
@@ -382,26 +387,20 @@ const getAllBusiness = async (req, res) => {
           }
         : null;
     const { limit, offset } = paginate.getPagination(page, size);
-    await User_preferences.create({
-        sortKey: sortKey || "ASC",
-        sortOrder: sortOrder || "business_id",
-        filterby: filterby || "all",
-        updatedBy: req.user.id,
-        createdBy: req.user.id,
-        user_id: req.user.id,
-    });
-    const user_preferences = await User_preferences.findAll({
-        where: { user_id: req.user.id },
-        order: [["createdAt", "DESC"]],
-    });
-    //
-    const sort_key = user_preferences.map((value) => value.sortKey);
-    const sort_order = user_preferences.map((value) => value.sortOrder);
-    const filter_by = user_preferences.map((value) => value.filterby);
-    console.log(filter_by[0], sort_order[0], sort_key[0]);
+    // eslint-disable-next-line no-unused-vars
+    const preference = await User_preferences.update(
+        {
+            sortKey: sortKey,
+            sortOrder: sortOrder,
+            filterby: filterby,
+        },
+        { where: { pref_name: "business_list" } }
+    );
 
-    //filter by cannabis business
-    if (filter_by[0] === "cannabis") {
+    const preferences = await User_preferences.findOne({
+        pref_name: "business_list",
+    });
+    if (preferences.filterby === "cannabis") {
         const business = await Business.findAndCountAll({
             attributes: [
                 "business_id",
@@ -416,15 +415,15 @@ const getAllBusiness = async (req, res) => {
             where: {
                 [Op.and]: [{ is_cannabis_business: "Y" }, condition],
             },
-            // include: [
-            //     {
-            //         model: db.Stage_Status,
-            //         attributes: ["membership", "status_id"],
-            //     },
-            // ],
+            include: [
+                {
+                    model: Stage_Statuses,
+                    attributes: ["membership", "status_id"],
+                },
+            ],
             limit,
             offset,
-            order: [[sort_key[0], sort_order[0]]],
+            order: [[preferences.sortKey, preferences.sortOrder]],
             // eslint-disable-next-line no-dupe-keys
             attributes: [
                 "business_id",
@@ -448,7 +447,7 @@ const getAllBusiness = async (req, res) => {
     }
 
     //filterby non-cannabis business
-    else if (filter_by[0] === "non-cannabis") {
+    if (preferences.filterby === "non-cannabis") {
         const business = await Business.findAndCountAll({
             attributes: [
                 "business_id",
@@ -463,15 +462,15 @@ const getAllBusiness = async (req, res) => {
             where: {
                 [Op.and]: [{ is_cannabis_business: "N" }, condition],
             },
-            // include: [
-            //     {
-            //         model: Stage_Statuses,
-            //         attributes: ["membership", "status_id"],
-            //     },
-            // ],
+            include: [
+                {
+                    model: Stage_Statuses,
+                    attributes: ["membership", "status_id"],
+                },
+            ],
             limit,
             offset,
-            order: [[sort_key[0], sort_order[0]]],
+            order: [[preferences.sortKey, preferences.sortOrder]],
             // eslint-disable-next-line no-dupe-keys
             attributes: [
                 "business_id",
@@ -484,6 +483,7 @@ const getAllBusiness = async (req, res) => {
                 "is_createdby_stdc",
             ],
         });
+
         const response = paginate.getPagingData(
             business,
             page,
@@ -494,7 +494,7 @@ const getAllBusiness = async (req, res) => {
         res.status(StatusCodes.OK).json(response);
     }
     //filter by approved vendor
-    else if (filter_by[0] === "approved vendor") {
+    if (preferences.filterby === "approved vendor") {
         const business = await Business.findAndCountAll({
             attributes: [
                 "business_id",
@@ -517,7 +517,7 @@ const getAllBusiness = async (req, res) => {
             ],
             limit,
             offset,
-            order: [[sort_key[0], sort_order[0]]],
+            order: [[preferences.sortKey, preferences.sortOrder]],
             // eslint-disable-next-line no-dupe-keys
             attributes: [
                 "business_id",
@@ -530,10 +530,12 @@ const getAllBusiness = async (req, res) => {
                 "is_createdby_stdc",
             ],
         });
+
         // eslint-disable-next-line no-undef
         const response = paginate.getPagingData(business, page, limit);
         res.status(StatusCodes.OK).json(response);
-    } else {
+    }
+    if (preferences.filterby === "all") {
         const business = await Business.findAndCountAll({
             attributes: [
                 "business_id",
@@ -547,12 +549,15 @@ const getAllBusiness = async (req, res) => {
             ],
 
             where: condition,
-            // include: [
-            //     { model: Stage_Statuses, attributes: ["membership", "status_id"] },
-            // ],
+            include: [
+                {
+                    model: Stage_Statuses,
+                    attributes: ["membership", "status_id"],
+                },
+            ],
             limit,
             offset,
-            order: [[sort_key[0] || "name", sort_order[0] || "ASC"]],
+            order: [[preferences.sortKey, preferences.sortOrder]],
             // eslint-disable-next-line no-dupe-keys
             attributes: [
                 "business_id",
@@ -1139,6 +1144,7 @@ const edituser = async (req, res) => {
         message: "user details updated successfuly",
     });
 };
+//delete user
 const deleteUser = async (req, res) => {
     await User_Association.destroy({
         where: { business_user_assoc_id: req.body.id },
@@ -1154,6 +1160,90 @@ const deleteUser = async (req, res) => {
         res.status(StatusCodes.OK).json({
             message: "deleted successfuly",
         });
+};
+//export businesshistory as csv file
+const businessHistoryCsv = async (req, res) => {
+    const id = req.params.id;
+
+    const business_name = await Business.findOne({ where: { user_id: id } });
+    const business = await business_history.findAll({
+        where: {
+            user_id: id,
+            [Op.and]: [
+                Sequelize.where(
+                    Sequelize.fn("date", Sequelize.col("createdAt")),
+                    ">=",
+                    req.body.from
+                ),
+                Sequelize.where(
+                    Sequelize.fn("date", Sequelize.col("createdAt")),
+                    "<=",
+                    req.body.to
+                ),
+            ],
+        },
+        attributes: ["updatedAt", "description", "updatedBy"],
+    });
+    if (!business) {
+        throw new CustomAPIError(" Business not found");
+    }
+
+    const data = [];
+    for (const value of business) {
+        const user = await User.findOne({ where: { id: value.updatedBy } });
+        data.push({
+            updatedAt: moment(value.updatedAt).format("DD/MM/YYYY, h:mm:ss a"),
+            description: value.description,
+            updatedBy: user.fullName,
+        });
+    }
+    const csv_name = `business_history_${business_name.name}.csv`;
+    const csv_path = `${path.join(__dirname, "csv_files")}/` + csv_name;
+    await csvDownload(csv_path, data);
+    res.status(StatusCodes.OK).json({ message: "file exported" });
+};
+
+//export businesshistory as pdf
+const businessHistoryPdf = async (req, res) => {
+    const id = req.params.id;
+
+    const business_name = await Business.findOne({ where: { user_id: id } });
+    const business = await business_history.findAll({
+        where: {
+            user_id: id,
+            [Op.and]: [
+                Sequelize.where(
+                    Sequelize.fn("date", Sequelize.col("createdAt")),
+                    ">=",
+                    req.body.from
+                ),
+                Sequelize.where(
+                    Sequelize.fn("date", Sequelize.col("createdAt")),
+                    "<=",
+                    req.body.to
+                ),
+            ],
+        },
+        attributes: ["updatedAt", "description", "updatedBy"],
+    });
+    if (!business) {
+        throw new CustomAPIError(" Business not found");
+    }
+
+    const pdf_name = `business_history_${business_name.name}.pdf`;
+    const pdf_path = `${path.join(__dirname, "pdf_files")}/` + pdf_name;
+
+    const data = [];
+    for (const value of business) {
+        const user = await User.findOne({ where: { id: value.updatedBy } });
+        data.push({
+            updatedAt: moment(value.updatedAt).format("DD/MM/YYYY, h:mm:ss a"),
+            description: value.description,
+            updatedBy: user.fullName,
+        });
+    }
+    await pdfExport(pdf_path, data, business_name.name);
+    res.status(StatusCodes.OK).json({ message: "exported to pdf file" });
 };
 
 module.exports = {
@@ -1174,4 +1264,6 @@ module.exports = {
     adduser,
     edituser,
     deleteUser,
+    businessHistoryCsv,
+    businessHistoryPdf,
 };

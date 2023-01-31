@@ -16,6 +16,8 @@ const {
     adduser,
     edituser,
     deleteUser,
+    businessHistoryCsv,
+    businessHistoryPdf,
 } = require("../controller/businessController");
 const router = express.Router();
 const authenticate = require("../middleware/authenticate");
@@ -25,12 +27,15 @@ router.get(
     validationMiddleware.getOneParamsSchema,
     oneBusiness
 );
-router.use(authenticate);
 router.get(
     "/getallbusiness",
     validationMiddleware.querySchemaBusinessList,
     getAllBusiness
 );
+router.post("/exportcsv/:id", businessHistoryCsv);
+router.post("/exportpdf/:id", businessHistoryPdf);
+router.use(authenticate);
+
 router.post("/adduserbusiness/:id", adduser);
 router.patch("/edituser/:id", edituser);
 router.delete("/deleteuser", deleteUser);
