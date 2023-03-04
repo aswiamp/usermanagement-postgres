@@ -1,10 +1,12 @@
-const fs = require("fs");
+//const fs = require("fs");
 const pdf_document = require("pdfkit-table");
 
-exports.pdfExport = async (pdf_path, data, business_name) => {
+exports.pdfExport = async (data, business_name, dataCallback, endCallback) => {
     // init document
     const doc = new pdf_document({ margin: 30, size: "A4" });
-    doc.pipe(fs.createWriteStream(pdf_path));
+
+    doc.on("data", dataCallback);
+    doc.on("end", endCallback);
 
     // doc.moveDown();
     const table = {
@@ -27,6 +29,4 @@ exports.pdfExport = async (pdf_path, data, business_name) => {
 
     //finalize document
     doc.end();
-
-    return pdf_path;
 };

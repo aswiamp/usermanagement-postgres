@@ -3,6 +3,7 @@ const db = require("../models");
 //const address = require("../models/address");
 const moment = require("moment");
 const CustomAPIError = require("../errors/custom-error");
+// eslint-disable-next-line no-unused-vars
 const path = require("path");
 const User = db.user;
 const User_preferences = db.user_prefrences;
@@ -19,6 +20,8 @@ const Business_address = db.Business_address;
 const InvestorType = db.Investortype;
 const EntityType = db.Entitytype;
 const Address = db.Address;
+const ReadableStream = require("stream").Readable;
+const Json2csvTransform = require("json2csv").Transform;
 const UserAssociationType = db.Userassociation;
 const User_Association = db.User_Association;
 const License = db.License;
@@ -31,8 +34,10 @@ const paginate = require("../utills/paginate");
 const UnauthorizedError = require("../errors/unauthorized");
 // eslint-disable-next-line no-unused-vars
 const address = require("../models/address");
-const { csvDownload } = require("../utills/csv");
+//const { csvDownload } = require("../utills/csv");
 const { pdfExport } = require("../utills/pdf");
+// eslint-disable-next-line no-unused-vars
+const { logger } = require("../utills/sendMail");
 const getCountryList = async (req, res) => {
     const data = await Country.findAll({
         attributes: ["bt_country_id", "name", "short_name"],
@@ -1164,86 +1169,424 @@ const deleteUser = async (req, res) => {
 //export businesshistory as csv file
 const businessHistoryCsv = async (req, res) => {
     const id = req.params.id;
-
+    const data = [];
     const business_name = await Business.findOne({ where: { user_id: id } });
-    const business = await business_history.findAll({
-        where: {
-            user_id: id,
-            [Op.and]: [
-                Sequelize.where(
-                    Sequelize.fn("date", Sequelize.col("createdAt")),
+    if (req.body.from && req.body.to) {
+        const business = await business_history.findAll({
+            where: {
+                user_id: id,
+                [Op.and]: [
+                    Sequelize.where(
+                        Sequelize.fn(
+                            "date",
+                            Sequelize.col("business_history.createdAt")
+                        ),
+                        ">=",
+                        req.body.from
+                    ),
+                    Sequelize.where(
+                        Sequelize.fn(
+                            "date",
+                            Sequelize.col("business_history.createdAt")
+                        ),
+                        "<=",
+                        req.body.to
+                    ),
+                ],
+            },
+            attributes: ["updatedAt", "description", "updatedBy"],
+            include: [
+                {
+                    model: User,
+                    attributes: {
+                        exclude: [
+                            "updatedAt",
+                            "createdAt",
+                            "id",
+                            "passwordExpiry",
+                            "phone",
+                            "address",
+                            "email",
+                            "image",
+                            "imageUrl",
+                        ],
+                    },
+                },
+            ],
+        });
+        if (!business) {
+            throw new CustomAPIError(" Business not found");
+        }
+
+        for (const value of business) {
+            data.push({
+                updatedAt: moment(value.updatedAt).format(
+                    "DD/MM/YYYY, h:mm:ss a"
+                ),
+                description: value.description,
+                updatedBy: value.user.fullName,
+            });
+        }
+    }
+    if (req.body.from && !req.body.to) {
+        const business = await business_history.findAll({
+            where: {
+                user_id: id,
+
+                createdAt: Sequelize.where(
+                    Sequelize.fn(
+                        "date",
+                        Sequelize.col("business_history.createdAt")
+                    ),
                     ">=",
                     req.body.from
                 ),
-                Sequelize.where(
-                    Sequelize.fn("date", Sequelize.col("createdAt")),
+            },
+            attributes: ["updatedAt", "description", "updatedBy"],
+            include: [
+                {
+                    model: User,
+                    attributes: {
+                        exclude: [
+                            "updatedAt",
+                            "createdAt",
+                            "id",
+                            "passwordExpiry",
+                            "phone",
+                            "address",
+                            "email",
+                            "image",
+                            "imageUrl",
+                        ],
+                    },
+                },
+            ],
+        });
+        if (!business) {
+            throw new CustomAPIError(" Business not found");
+        }
+
+        for (const value of business) {
+            data.push({
+                updatedAt: moment(value.updatedAt).format(
+                    "DD/MM/YYYY, h:mm:ss a"
+                ),
+                description: value.description,
+                updatedBy: value.user.fullName,
+            });
+        }
+    }
+    if (req.body.to && !req.body.from) {
+        const business = await business_history.findAll({
+            where: {
+                user_id: id,
+
+                createdAt: Sequelize.where(
+                    Sequelize.fn(
+                        "date",
+                        Sequelize.col("business_history.createdAt")
+                    ),
                     "<=",
                     req.body.to
                 ),
+            },
+
+            attributes: ["updatedAt", "description", "updatedBy"],
+            include: User,
+        });
+        if (!business) {
+            throw new CustomAPIError(" Business not found");
+        }
+
+        for (const value of business) {
+            data.push({
+                updatedAt: moment(value.updatedAt).format(
+                    "DD/MM/YYYY, h:mm:ss a"
+                ),
+                description: value.description,
+                updatedBy: value.user.fullName,
+            });
+        }
+    }
+    //
+    if (!req.body.to && !req.body.from) {
+        const business = await business_history.findAll({
+            where: {
+                user_id: id,
+            },
+            attributes: ["updatedAt", "description", "updatedBy"],
+            include: [
+                {
+                    model: User,
+                    attributes: {
+                        exclude: [
+                            "updatedAt",
+                            "createdAt",
+                            "id",
+                            "passwordExpiry",
+                            "phone",
+                            "address",
+                            "email",
+                            "image",
+                            "imageUrl",
+                        ],
+                    },
+                },
             ],
-        },
-        attributes: ["updatedAt", "description", "updatedBy"],
-    });
-    if (!business) {
-        throw new CustomAPIError(" Business not found");
+        });
+        if (!business) {
+            throw new CustomAPIError(" Business not found");
+        }
+
+        for (const value of business) {
+            data.push({
+                updatedAt: moment(value.updatedAt).format(
+                    "DD/MM/YYYY, h:mm:ss a"
+                ),
+                description: value.description,
+                updatedBy: value.user.fullName,
+            });
+        }
     }
 
-    const data = [];
-    for (const value of business) {
-        const user = await User.findOne({ where: { id: value.updatedBy } });
-        data.push({
-            updatedAt: moment(value.updatedAt).format("DD/MM/YYYY, h:mm:ss a"),
-            description: value.description,
-            updatedBy: user.fullName,
-        });
-    }
-    const csv_name = `business_history_${business_name.name}.csv`;
-    const csv_path = `${path.join(__dirname, "csv_files")}/` + csv_name;
-    await csvDownload(csv_path, data);
-    res.status(StatusCodes.OK).json({ message: "file exported" });
+    const fields = [
+        {
+            value: "createdAt",
+            label: "Date",
+        },
+        {
+            value: "description",
+            label: "Description",
+        },
+        {
+            value: "firstName",
+            label: "Updated By",
+        },
+    ];
+    //new readable stream
+    const stream = new ReadableStream();
+    stream.push(JSON.stringify(data));
+    //done writing data
+    stream.push(null);
+
+    const json2csv = new Json2csvTransform({}, fields);
+    res.writeHead(200, {
+        "Content-Type": "application/csv",
+        "Content-Disposition": `attachment;filename=business_history_${business_name.name}.csv`,
+    });
+    //pipe the data
+    stream.pipe(json2csv).pipe(res);
 };
 
 //export businesshistory as pdf
 const businessHistoryPdf = async (req, res) => {
     const id = req.params.id;
 
+    const data = [];
     const business_name = await Business.findOne({ where: { user_id: id } });
-    const business = await business_history.findAll({
-        where: {
-            user_id: id,
-            [Op.and]: [
-                Sequelize.where(
-                    Sequelize.fn("date", Sequelize.col("createdAt")),
+    if (req.body.from && req.body.to) {
+        const business = await business_history.findAll({
+            where: {
+                user_id: id,
+                [Op.and]: [
+                    Sequelize.where(
+                        Sequelize.fn(
+                            "date",
+                            Sequelize.col("business_history.createdAt")
+                        ),
+                        ">=",
+                        req.body.from
+                    ),
+                    Sequelize.where(
+                        Sequelize.fn(
+                            "date",
+                            Sequelize.col("business_history.createdAt")
+                        ),
+                        "<=",
+                        req.body.to
+                    ),
+                ],
+            },
+            attributes: ["updatedAt", "description", "updatedBy"],
+            include: [
+                {
+                    model: User,
+                    attributes: {
+                        exclude: [
+                            "updatedAt",
+                            "createdAt",
+                            "id",
+                            "passwordExpiry",
+                            "phone",
+                            "address",
+                            "email",
+                            "image",
+                            "imageUrl",
+                        ],
+                    },
+                },
+            ],
+        });
+        if (!business) {
+            throw new CustomAPIError(" Business not found");
+        }
+
+        for (const value of business) {
+            data.push({
+                updatedAt: moment(value.updatedAt).format(
+                    "DD/MM/YYYY, h:mm:ss a"
+                ),
+                description: value.description,
+                updatedBy: value.user.fullName,
+            });
+        }
+    }
+    if (req.body.from && !req.body.to) {
+        const business = await business_history.findAll({
+            where: {
+                user_id: id,
+
+                createdAt: Sequelize.where(
+                    Sequelize.fn(
+                        "date",
+                        Sequelize.col("business_history.createdAt")
+                    ),
                     ">=",
                     req.body.from
                 ),
-                Sequelize.where(
-                    Sequelize.fn("date", Sequelize.col("createdAt")),
+            },
+            attributes: ["updatedAt", "description", "updatedBy"],
+            include: [
+                {
+                    model: User,
+                    attributes: {
+                        exclude: [
+                            "updatedAt",
+                            "createdAt",
+                            "id",
+                            "passwordExpiry",
+                            "phone",
+                            "address",
+                            "email",
+                            "image",
+                            "imageUrl",
+                        ],
+                    },
+                },
+            ],
+        });
+        if (!business) {
+            throw new CustomAPIError(" Business not found");
+        }
+
+        for (const value of business) {
+            data.push({
+                updatedAt: moment(value.updatedAt).format(
+                    "DD/MM/YYYY, h:mm:ss a"
+                ),
+                description: value.description,
+                updatedBy: value.user.fullName,
+            });
+        }
+    }
+    if (req.body.to && !req.body.from) {
+        const business = await business_history.findAll({
+            where: {
+                user_id: id,
+
+                createdAt: Sequelize.where(
+                    Sequelize.fn(
+                        "date",
+                        Sequelize.col("business_history.createdAt")
+                    ),
                     "<=",
                     req.body.to
                 ),
+            },
+            attributes: ["updatedAt", "description", "updatedBy"],
+            include: [
+                {
+                    model: User,
+                    attributes: {
+                        exclude: [
+                            "updatedAt",
+                            "createdAt",
+                            "id",
+                            "passwordExpiry",
+                            "phone",
+                            "address",
+                            "email",
+                            "image",
+                            "imageUrl",
+                        ],
+                    },
+                },
             ],
-        },
-        attributes: ["updatedAt", "description", "updatedBy"],
-    });
-    if (!business) {
-        throw new CustomAPIError(" Business not found");
-    }
-
-    const pdf_name = `business_history_${business_name.name}.pdf`;
-    const pdf_path = `${path.join(__dirname, "pdf_files")}/` + pdf_name;
-
-    const data = [];
-    for (const value of business) {
-        const user = await User.findOne({ where: { id: value.updatedBy } });
-        data.push({
-            updatedAt: moment(value.updatedAt).format("DD/MM/YYYY, h:mm:ss a"),
-            description: value.description,
-            updatedBy: user.fullName,
         });
+        if (!business) {
+            throw new CustomAPIError(" Business not found");
+        }
+
+        for (const value of business) {
+            data.push({
+                updatedAt: moment(value.updatedAt).format(
+                    "DD/MM/YYYY, h:mm:ss a"
+                ),
+                description: value.description,
+                updatedBy: value.user.fullName,
+            });
+        }
     }
-    await pdfExport(pdf_path, data, business_name.name);
-    res.status(StatusCodes.OK).json({ message: "exported to pdf file" });
+    //
+    if (!req.body.to && !req.body.from) {
+        const business = await business_history.findAll({
+            where: {
+                user_id: id,
+            },
+            attributes: ["updatedAt", "description", "updatedBy"],
+            include: [
+                {
+                    model: User,
+                    attributes: {
+                        exclude: [
+                            "updatedAt",
+                            "createdAt",
+                            "id",
+                            "passwordExpiry",
+                            "phone",
+                            "address",
+                            "email",
+                            "image",
+                            "imageUrl",
+                        ],
+                    },
+                },
+            ],
+        });
+        if (!business) {
+            throw new CustomAPIError(" Business not found");
+        }
+
+        for (const value of business) {
+            data.push({
+                updatedAt: moment(value.updatedAt).format(
+                    "DD/MM/YYYY, h:mm:ss a"
+                ),
+                description: value.description,
+                updatedBy: value.user.fullName,
+            });
+        }
+    }
+    const stream = res.writeHead(200, {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment;filename=business_history_${business_name.name}.pdf`,
+    });
+    await pdfExport(
+        data,
+        business_name.name,
+        (chunk) => stream.write(chunk),
+        () => stream.end()
+    );
 };
 
 module.exports = {

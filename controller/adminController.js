@@ -9,6 +9,7 @@ const CustomAPIError = require("../errors/custom-error");
 const paginate = require("../utills/paginate");
 const { Op } = require("sequelize");
 const bucket = require("../utills/s3bucket");
+//const BadRequestError = require("../errors/badRequestError");
 
 //sending invite mail
 const sendInvite = async (req, res) => {
